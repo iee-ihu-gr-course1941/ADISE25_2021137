@@ -1,3 +1,7 @@
+* {
+    box-sizing: border-box;
+}
+
 /* 1. Γενικές Ρυθμίσεις - Η Τσόχα */
 body {
     margin: 0;
@@ -45,20 +49,29 @@ h1 {
     min-height: 150px;
 }
 
-/* 4. Στυλ Κάρτας (Γενικό) */
+/* Το κουτί της κάρτας */
 .card {
     width: 80px;
     height: 120px;
-    background-color: white;
+    background-color: white; /* Λευκό φόντο πίσω από την εικόνα */
     border-radius: 8px;
-    box-shadow: 2px 2px 5px rgba(0,0,0,0.5); /* Σκιά για να φαίνεται τρισδιάστατο */
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+
+    /* Κεντράρισμα και Περιορισμός */
     display: flex;
     justify-content: center;
     align-items: center;
-    font-weight: bold;
-    color: black;
-    cursor: default;
-    transition: transform 0.2s; /* Για το εφέ κίνησης */
+    overflow: hidden; /* ΑΥΤΟ ΕΙΝΑΙ ΤΟ ΚΛΕΙΔΙ: Κόβει ό,τι πάει να βγει απ' έξω */
+    position: relative; /* Για να κάθονται όλα σωστά */
+}
+
+/* Η εικόνα μέσα στην κάρτα */
+.card img {
+    width: 100%;       /* Πιάνει όλο το πλάτος */
+    height: 100%;      /* Πιάνει όλο το ύψος */
+    object-fit: contain; /* Προσαρμόζεται χωρίς να παραμορφώνεται */
+    display: block;    /* Διορθώνει ένα μικρό κενό που αφήνουν οι browsers από κάτω */
+    padding: 5px;      /* Ένα μικρό "αέρα" για να μην ακουμπάει η εικόνα στις άκρες */
 }
 
 /* 5. Στυλ για τα χαρτιά του αντιπάλου (Κλειστά) */

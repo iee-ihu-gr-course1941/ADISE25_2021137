@@ -22,6 +22,7 @@ if ($row = $result->fetch_assoc()) {
     <title>Ξερή - Ελληνικό Παιχνίδι</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="js/game.js"></script>
 </head>
 <body>
 
@@ -66,4 +67,7 @@ if ($row = $result->fetch_assoc()) {
     </script>
 
 </body>
+<script>
+    var currentGameId = <?php echo $current_game_id; ?>;
+</script>
 </html>
