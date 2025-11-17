@@ -1,0 +1,105 @@
+/* 1. Γενικές Ρυθμίσεις - Η Τσόχα */
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #35654d; /* Το κλασικό πράσινο της τσόχας */
+    font-family: 'Arial', sans-serif;
+    color: white;
+    text-align: center;
+    height: 100vh; /* Να πιάνει όλο το ύψος της οθόνης */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; /* Σπρώχνει τα στοιχεία πάνω-κάτω */
+}
+
+h1 {
+    margin-top: 10px;
+    font-size: 24px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+/* 2. Το ταμπλό του παιχνιδιού */
+#game-board {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    justify-content: space-between; /* Αντίπαλος πάνω, Τραπέζι μέση, Εγώ κάτω */
+    padding: 20px;
+}
+
+/* 3. Οι τρεις ζώνες (Αντίπαλος, Τραπέζι, Παίκτης) */
+#opponent-hand, #table-area, #my-hand {
+    display: flex;
+    justify-content: center; /* Κεντράρισμα των χαρτιών */
+    align-items: center;
+    gap: 10px; /* Κενό ανάμεσα στα χαρτιά */
+    min-height: 120px; /* Ελάχιστο ύψος για να χωράει το χαρτί */
+}
+
+/* Ειδικά για το τραπέζι στη μέση */
+#table-area {
+    background-color: rgba(0, 0, 0, 0.1); /* Λίγο πιο σκούρο για να ξεχωρίζει */
+    border-radius: 20px;
+    padding: 20px;
+    margin: 10px 50px; /* Να μην κολλάει στις άκρες */
+    min-height: 150px;
+}
+
+/* 4. Στυλ Κάρτας (Γενικό) */
+.card {
+    width: 80px;
+    height: 120px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.5); /* Σκιά για να φαίνεται τρισδιάστατο */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    color: black;
+    cursor: default;
+    transition: transform 0.2s; /* Για το εφέ κίνησης */
+}
+
+/* 5. Στυλ για τα χαρτιά του αντιπάλου (Κλειστά) */
+.card-back {
+    width: 80px;
+    height: 120px;
+    border-radius: 8px;
+    /* Ένα ωραίο μπλε μοτίβο για την πλάτη */
+    background: repeating-linear-gradient(
+        45deg,
+        #1e3c72,
+        #1e3c72 10px,
+        #2a5298 10px,
+        #2a5298 20px
+    );
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+    border: 2px solid white;
+}
+
+/* 6. Στυλ για τα ΔΙΚΑ ΜΟΥ χαρτιά (Interactive) */
+#my-hand .card {
+    cursor: pointer; /* Δείχνει χεράκι όταν πας από πάνω */
+}
+
+#my-hand .card:hover {
+    transform: translateY(-15px); /* Το χαρτί σηκώνεται όταν το κοιτάς */
+    border: 2px solid yellow; /* Κίτρινο περίγραμμα για να ξέρεις ποιο διάλεξες */
+}
+
+/* 7. Κουμπί Νέας Παρτίδας */
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    background-color: #8B0000;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+
+button:hover {
+    background-color: #ff4d4d;
+}
