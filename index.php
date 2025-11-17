@@ -26,25 +26,37 @@ if ($row = $result->fetch_assoc()) {
 </head>
 <body>
 
-    <h1>Ξερή (Παιχνίδι #<?php echo $current_game_id; ?>)</h1>
+    <div id="ui-layer">
+        <div class="score-box opponent-score">
+            Αντίπαλος: <span id="score-opp">0</span>
+        </div>
+        
+        <div class="game-title">ΞΕΡΗ #<?php echo $current_game_id; ?></div>
+
+        <div class="score-box my-score">
+            Εγώ: <span id="score-me">0</span>
+        </div>
+    </div>
 
     <div id="game-board">
         
-        <div id="opponent-hand">
-            <div class="card-back"></div>
-            <div class="card-back"></div>
-            <div class="card-back"></div>
-            <div class="card-back"></div>
-            <div class="card-back"></div>
-            <div class="card-back"></div>
+        <div class="player-zone">
+            <div id="opponent-pile" class="score-pile"></div>
+            
+            <div id="opponent-hand">
+                </div>
         </div>
 
         <div id="table-area">
             <p>Φόρτωση τραπεζιού...</p>
         </div>
 
-        <div id="my-hand">
-             <p>Φόρτωση χεριού...</p>
+        <div class="player-zone">
+            <div id="my-hand">
+                 </div>
+
+            <div id="my-pile" class="score-pile">
+                </div>
         </div>
 
     </div>

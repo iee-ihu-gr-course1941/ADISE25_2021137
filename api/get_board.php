@@ -1,63 +1,83 @@
 <?php
 // api/get_board.php
-
 require_once '../db.php';
 
-header('Content-Type: application/json'); // Λέμε στον browser ότι στέλνουμε δεδομένα JSON
+header('Content-Type: application/json');
 
-// 1. Έλεγχος: Μας έδωσε η JS το ID του παιχνιδιού;
 if (!isset($_GET['game_id'])) {
-    echo json_encode(['error' => 'No game_id provided']);
-    exit;
+    echo json_encode(['error' => 'No game_id provided']); exit;
+}
+$game_id = intval($_GET['game_id']);
+
+// --- ΣΥΝΑΡΤΗΣΗ ΥΠΟΛΟΓΙΣΜΟΥ ΠΟΝΤΩΝ ΑΠΟ ΚΑΡΤΕΣ ---
+function calculate_card_points($mysqli, $game_id, $player_pile) {
+    // Παίρνουμε όλα τα χαρτιά από τη στοίβα του παίκτη
+    $sql = "SELECT card_code FROM game_cards WHERE game_id = $game_id AND card_position = '$player_pile'";
+    $result = $mysqli->query($sql);
+    
+    $points = 0;
+    while($row = $result->fetch_assoc()) {
+        $code = $row['card_code']; // π.χ. C2, D10, H5
+        
+        // Κανόνες Πόντων:
+        // 1. Άσσοι (Το νούμερο είναι 1) -> 1 πόντος
+        if (substr($code, 1) === '1') { 
+            $points += 1; 
+        }
+        // 2. Το 2 Σπαθί (C2) -> 1 πόντος
+        elseif ($code === 'C2') { 
+            $points += 1; 
+        }
+        // 3. Το 10 Καρρό (D10) -> 2 πόντοι
+        elseif ($code === 'D10') { 
+            $points += 2; 
+        }
+        // Τα υπόλοιπα 0 πόντοι (εκτός αν θες να μετράς και το "πλήθος" καρτών στο τέλος)
+    }
+    return $points;
 }
 
-$game_id = intval($_GET['game_id']); // Καθαρισμός για ασφάλεια (να είναι σίγουρα νούμερο)
-$my_player_id = 1; // Προσωρινά λέμε ότι είμαστε ο Παίκτης 1
-
-// ------------------------------------------------
-// Α. Χαρτιά στο Τραπέζι
-// ------------------------------------------------
+// 1. Τραπέζι
 $sql_table = "SELECT card_code FROM game_cards WHERE game_id = $game_id AND card_position = 'table' ORDER BY card_order ASC";
-$result_table = $mysqli->query($sql_table);
-
+$res_table = $mysqli->query($sql_table);
 $table_cards = [];
-while ($row = $result_table->fetch_assoc()) {
-    $table_cards[] = $row['card_code']; // Π.χ. ['C10', 'H5', 'S2']
-}
+while ($row = $res_table->fetch_assoc()) { $table_cards[] = $row['card_code']; }
 
-// ------------------------------------------------
-// Β. Τα Χαρτιά ΜΟΥ (Player 1)
-// ------------------------------------------------
-// Χρειαζόμαστε και το ID της εγγραφής για να ξέρουμε ποιο χαρτί θα παίξουμε
+// 2. Χέρι Μου
 $sql_hand = "SELECT id, card_code FROM game_cards WHERE game_id = $game_id AND card_position = 'hand_p1' ORDER BY card_order ASC";
-$result_hand = $mysqli->query($sql_hand);
-
+$res_hand = $mysqli->query($sql_hand);
 $my_cards = [];
-while ($row = $result_hand->fetch_assoc()) {
-    $my_cards[] = [
-        'id' => $row['id'],        // Το μοναδικό ID στη βάση (χρήσιμο για το κλικ)
-        'code' => $row['card_code'] // Ο κωδικός της εικόνας
-    ];
-}
+while ($row = $res_hand->fetch_assoc()) { $my_cards[] = ['id' => $row['id'], 'code' => $row['card_code']]; }
 
-// ------------------------------------------------
-// Γ. Τα Χαρτιά του ΑΝΤΙΠΑΛΟΥ (Player 2)
-// ------------------------------------------------
-// ΠΡΟΣΟΧΗ: Εδώ μετράμε ΜΟΝΟ πόσα είναι (COUNT). Δεν στέλνουμε τα χαρτιά!
-$sql_opp = "SELECT COUNT(*) as count FROM game_cards WHERE game_id = $game_id AND card_position = 'hand_p2'";
-$result_opp = $mysqli->query($sql_opp);
-$row_opp = $result_opp->fetch_assoc();
-$opponent_cards_count = $row_opp['count'];
+// 3. Αντίπαλος
+$res_opp = $mysqli->query("SELECT COUNT(*) as count FROM game_cards WHERE game_id = $game_id AND card_position = 'hand_p2'");
+$opponent_cards_count = $res_opp->fetch_assoc()['count'];
 
 
 // ------------------------------------------------
-// Δ. Αποστολή Απάντησης
+// 4. ΥΠΟΛΟΓΙΣΜΟΣ ΣΚΟΡ (Bonus + Κάρτες)
 // ------------------------------------------------
-$response = [
+
+// Α. Παίρνουμε τους πόντους Ξερής από τη βάση
+$sql_bonus = "SELECT p1_bonus_points, p2_bonus_points FROM games WHERE id = $game_id";
+$res_bonus = $mysqli->query($sql_bonus);
+$bonus = $res_bonus->fetch_assoc();
+
+// Β. Υπολογίζουμε τους πόντους από τα φύλλα που έχουμε μαζέψει
+$my_card_points = calculate_card_points($mysqli, $game_id, 'score_p1');
+$opp_card_points = calculate_card_points($mysqli, $game_id, 'score_p2');
+
+// Γ. Τελικό Σκορ
+$my_total_score = intval($bonus['p1_bonus_points']) + $my_card_points;
+$opp_total_score = intval($bonus['p2_bonus_points']) + $opp_card_points;
+
+
+echo json_encode([
     'table' => $table_cards,
     'my_hand' => $my_cards,
-    'opponent_cards_count' => $opponent_cards_count
-];
-
-echo json_encode($response);
+    'opponent_cards_count' => $opponent_cards_count,
+    // Στέλνουμε ΤΟ ΣΚΟΡ αντί για το πλήθος καρτών
+    'my_pile_count' => $my_total_score, 
+    'opp_pile_count' => $opp_total_score
+]);
 ?>

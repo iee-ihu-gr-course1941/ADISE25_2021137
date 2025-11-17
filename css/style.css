@@ -22,6 +22,45 @@ h1 {
     text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
 }
 
+/* --- UI LAYER (Σκορ & Τίτλος) --- */
+#ui-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between; /* Αριστερά, Μέση, Δεξιά */
+    align-items: center;
+    pointer-events: none; /* Για να μπορούμε να πατάμε κλικ από κάτω αν χρειαστεί */
+    z-index: 100; /* Να είναι πάνω από όλα */
+}
+
+.game-title {
+    font-size: 24px;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px black;
+    color: #ffd700; /* Χρυσό χρώμα */
+}
+
+.score-box {
+    background-color: rgba(0, 0, 0, 0.6); /* Ημιδιαφανές μαύρο */
+    color: white;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 18px;
+    font-weight: bold;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+/* Χρωματίζουμε διαφορετικά τα νούμερα */
+.score-box span {
+    color: #00ffea; /* Ένα ωραίο κυανό για τα νούμερα */
+    font-size: 22px;
+    margin-left: 5px;
+}
+
 /* 2. Το ταμπλό του παιχνιδιού */
 #game-board {
     display: flex;
@@ -49,29 +88,67 @@ h1 {
     min-height: 150px;
 }
 
-/* Το κουτί της κάρτας */
-.card {
-    width: 80px;
-    height: 120px;
-    background-color: white; /* Λευκό φόντο πίσω από την εικόνα */
-    border-radius: 8px;
-    box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
-
-    /* Κεντράρισμα και Περιορισμός */
+.player-zone {
     display: flex;
     justify-content: center;
     align-items: center;
-    overflow: hidden; /* ΑΥΤΟ ΕΙΝΑΙ ΤΟ ΚΛΕΙΔΙ: Κόβει ό,τι πάει να βγει απ' έξω */
-    position: relative; /* Για να κάθονται όλα σωστά */
+    gap: 20px; /* Απόσταση στοίβας από το χέρι */
+    width: 100%;
 }
 
-/* Η εικόνα μέσα στην κάρτα */
+/* Η στοίβα των κερδισμένων */
+.score-pile {
+    width: 80px;
+    height: 120px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    color: black;
+    
+    /* Ένα αχνό περίγραμμα για να φαίνεται πού είναι η θέση */
+    border: 2px dashed rgba(255,255,255,0.3); 
+}
+
+/* Όταν η στοίβα έχει χαρτιά, αλλάζουμε το στυλ */
+.score-pile.has-cards {
+    border: none; /* Φεύγει το διακεκομμένο */
+    /* Εφέ πολλών καρτών */
+    box-shadow: 
+        2px 2px 0 #1e3c72,
+        4px 4px 0 white,
+        6px 6px 5px rgba(0,0,0,0.5);
+    background-image: url('../img/cards/back.png');
+}
+
+/* Το κουτί της κάρτας (το div που περιέχει την εικόνα) */
+.card {
+    width: 80px;            /* Σταθερό πλάτος */
+    height: 120px;          /* Σταθερό ύψος */
+    flex-shrink: 0;         /* Απαγορεύει στο flexbox να το "ζουλήξει" */
+    
+    background-color: white; /* Λευκό φόντο πίσω από την εικόνα */
+    border-radius: 8px;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+    
+    display: flex;          /* Χρησιμοποιούμε flex για να κεντράρουμε την εικόνα */
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;       /* ΤΟ ΚΛΕΙΔΙ: Κόβει ό,τι πάει να βγει απ' έξω */
+    position: relative;     /* Βοηθάει στην τοποθέτηση του περιεχομένου */
+}
+
+/* Η ίδια η εικόνα μέσα στο κουτί */
 .card img {
-    width: 100%;       /* Πιάνει όλο το πλάτος */
-    height: 100%;      /* Πιάνει όλο το ύψος */
-    object-fit: contain; /* Προσαρμόζεται χωρίς να παραμορφώνεται */
-    display: block;    /* Διορθώνει ένα μικρό κενό που αφήνουν οι browsers από κάτω */
-    padding: 5px;      /* Ένα μικρό "αέρα" για να μην ακουμπάει η εικόνα στις άκρες */
+    /* Εδώ βάζουμε πολύ αυστηρούς κανόνες */
+    max-width: 100%;       /* Το πολύ 100% του πλάτους του γονέα (.card) */
+    max-height: 100%;      /* Το πολύ 100% του ύψους του γονέα (.card) */
+    width: auto;           /* Αφήνει το πλάτος να προσαρμοστεί */
+    height: auto;          /* Αφήνει το ύψος να προσαρμοστεί */
+    object-fit: contain;   /* Προσαρμόζει την εικόνα χωρίς να την παραμορφώνει */
+    display: block;        /* Διορθώνει μικρά κενά */
+    /* Δεν βάζουμε padding εδώ, το βάζουμε στο .card αν θέλουμε περιθώριο */
 }
 
 /* 5. Στυλ για τα χαρτιά του αντιπάλου (Κλειστά) */
@@ -115,4 +192,83 @@ button {
 
 button:hover {
     background-color: #ff4d4d;
+}
+
+/* --- RESPONSIVE ΡΥΘΜΙΣΕΙΣ ΓΙΑ ΚΙΝΗΤΑ --- */
+
+/* Όταν η οθόνη είναι μικρότερη από 600px (δηλαδή κινητά) */
+@media (max-width: 600px) {
+    
+    /* 1. Μικραίνουμε τα κενά ανάμεσα στις ζώνες */
+    #game-board {
+        padding: 10px;
+    }
+
+    #table-area {
+        margin: 5px 10px;
+        min-height: 100px;
+    }
+
+    .score-pile {
+        width: 50px;
+        height: 75px;
+    }
+
+    /* 2. Μικραίνουμε τα χαρτιά */
+    .card, .card-back {
+        width: 50px;   /* Από 80px το πάμε 50px */
+        height: 75px;  /* Από 120px το πάμε 75px */
+        border-radius: 4px;
+    }
+
+    /* 3. Μικραίνουμε τα κενά ανάμεσα στα χαρτιά */
+    #opponent-hand, #table-area, #my-hand {
+        gap: 5px;      /* Από 10px το πάμε 5px */
+        min-height: 80px;
+    }
+
+    /* 4. Μικραίνουμε λίγο τα γράμματα */
+    h1 {
+        font-size: 18px;
+        margin-top: 5px;
+    }
+    
+    /* Όταν η στοίβα έχει χαρτιά */
+    .score-pile.has-cards {
+        border: none; /* Φεύγει το διακεκομμένο */
+        
+        /* Βάζουμε την εικόνα φόντο απευθείας στο κουτί */
+        background-image: url('../img/cards/back.png');
+        background-size: cover;
+        background-position: center;
+        
+        /* Εφέ πολλών καρτών (σκιά) */
+        box-shadow: 
+            2px 2px 0 #1e3c72,
+            4px 4px 0 white,
+            6px 6px 5px rgba(0,0,0,0.5);
+            
+        /* Σιγουρεύουμε ότι το νούμερο θα φαίνεται */
+        position: relative;
+        color: white;
+        text-shadow: 1px 1px 2px black, 0 0 5px black; /* Έντονη σκιά στο νούμερο για να διαβάζεται */
+        font-size: 24px;
+    }
+
+    button {
+        padding: 8px 16px;
+        font-size: 14px;
+    }
+
+    #ui-layer {
+        padding: 10px;
+        font-size: 14px;
+    }
+    .game-title {
+        font-size: 16px;
+    }
+    .score-box {
+        padding: 5px 10px;
+        font-size: 14px;
+    }
 }
