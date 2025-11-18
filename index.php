@@ -48,18 +48,40 @@ require_once 'db.php'; // Μόνο η σύνδεση χρειάζεται (γι�
     <?php endif; ?>
 
     <div id="main-menu" <?php if (!isset($_SESSION['user_id'])) echo 'class="hidden"'; ?>>
-        <div class="menu-content">
-            <h1 class="menu-title">ΞΕΡΗ</h1>
-            <p class="menu-subtitle">Καλωσήρθες, <?php echo isset($_SESSION['username']) ? $_SESSION['username'] : 'Παίκτη'; ?></p>
-            
-            <button id="btn-play-main" class="menu-btn">ΠΑΙΞΕ</button>
-            
-            <div id="mode-selector" style="display: none;">
-                <button class="menu-btn mode-btn" data-mode="pve">VS COMPUTER</button>
-                <button class="menu-btn mode-btn" data-mode="pvp">VS PLAYER 2</button>
+        <div class="menu-container"> <div class="menu-content">
+                <h1 class="menu-title">ΞΕΡΗ</h1>
+                <p class="menu-subtitle">Καλωσήρθες, <?php echo isset($_SESSION['username']) ? $_SESSION['username'] : 'Παίκτη'; ?></p>
+                
+                <button id="btn-play-main" class="menu-btn">ΠΑΙΞΕ</button>
+                
+                <div id="mode-selector" style="display: none;">
+                    <button class="menu-btn mode-btn" data-mode="pve">VS COMPUTER</button>
+                    <button class="menu-btn mode-btn" data-mode="pvp">VS PLAYER 2</button>
+                </div>
+                
+                <button id="btn-logout" class="menu-btn logout-btn" onclick="doLogout()">ΕΞΟΔΟΣ ΑΠΟ ΛΟΓΑΡΙΑΣΜΟ</button>
             </div>
-            
-            <button id="btn-logout" class="menu-btn logout-btn" onclick="doLogout()">ΕΞΟΔΟΣ ΑΠΟ ΛΟΓΑΡΙΑΣΜΟ</button>
+
+            <div id="stats-box">
+                <h2>Στατιστικά</h2>
+                <div class="stat-item">
+                    <span class="stat-label">Νίκες:</span>
+                    <span id="stat-wins" class="stat-value win">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Ήττες:</span>
+                    <span id="stat-losses" class="stat-value loss">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Ισοπαλίες:</span>
+                    <span id="stat-draws" class="stat-value draw">0</span>
+                </div>
+                <div class="stat-item total">
+                    <span class="stat-label">Σύνολο Παιχνιδιών:</span>
+                    <span id="stat-total" class="stat-value total">0</span>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -92,8 +114,7 @@ require_once 'db.php'; // Μόνο η σύνδεση χρειάζεται (γι�
         </div>
         
         <div class="game-title-container">
-            <div class="game-title">ΞΕΡΗ</div>
-        </div>
+            <div class="game-title"></div> </div>
 
         <div class="score-box my-score">
             <span id="name-me" class="player-name-text">Εγώ</span>

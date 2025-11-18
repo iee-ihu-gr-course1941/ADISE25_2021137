@@ -73,6 +73,41 @@ function doLogout() {
 }
 
 
+// ---------------------------------------------------------
+// NEW: ΛΟΓΙΚΗ ΣΤΑΤΙΣΤΙΚΩΝ ΠΑΙΚΤΗ
+// ---------------------------------------------------------
+
+function fetchUserStats() {
+    $.ajax({
+        url: 'api/get_stats.php',
+        type: 'GET',
+        dataType: 'json',
+        success: function(response) {
+            if (response.status === 'success') {
+                var stats = response.stats;
+                // Υπολογισμός συνολικών παιχνιδιών
+                var totalGames = parseInt(stats.wins) + parseInt(stats.losses) + parseInt(stats.draws);
+                
+                // Ενημέρωση HTML
+                $('#stat-wins').text(stats.wins);
+                $('#stat-losses').text(stats.losses);
+                $('#stat-draws').text(stats.draws);
+                $('#stat-total').text(totalGames);
+                
+                $('#stats-box').show(); 
+            } else {
+                console.error("Could not fetch user stats:", response.error);
+                $('#stats-box').hide(); 
+            }
+        },
+        error: function() {
+            console.error("Error communicating with stats API.");
+            $('#stats-box').hide();
+        }
+    });
+}
+
+
 $(document).ready(function() {
     
     // Εάν δεν υπάρχει η φόρμα σύνδεσης/εγγραφής, σημαίνει ότι είμαστε ήδη συνδεδεμένοι.
@@ -93,6 +128,9 @@ $(document).ready(function() {
         
         // Απόκρυψη του κουμπιού εξόδου στην αρχή
         $('#btn-quit-game').hide();
+
+        // Φόρτωσε τα στατιστικά του παίκτη
+        fetchUserStats(); 
     }
 });
 
@@ -213,7 +251,7 @@ function startPolling() {
 // 2. ΚΥΡΙΑ ΛΟΓΙΚΗ ΑΝΑΝΕΩΣΗΣ (POLLING)
 // ---------------------------------------------------------
 function fetchBoardData() {
-    // ΝΕΟ: Αν δεν υπάρχει ενεργό παιχνίδι, κρύψε το κουμπί εξόδου
+    // Αν δεν υπάρχει ενεργό παιχνίδι, κρύψε το κουμπί εξόδου
     if (!currentGameId) {
         $('#btn-quit-game').hide(); 
         return;
@@ -248,7 +286,7 @@ function fetchBoardData() {
                 $('#waiting-screen').hide();
                 $('#game-over-screen').css('display', 'flex'); 
                 
-                // ΝΕΟ: Κρύψε το κουμπί στο game over
+                // Κρύψε το κουμπί στο game over
                 $('#btn-quit-game').hide(); 
 
                 // Μήνυμα Νίκης/Ήττας/Ισοπαλίας
@@ -276,16 +314,15 @@ function fetchBoardData() {
             // Γ. Κανονική Ροή Παιχνιδιού
             $('#waiting-screen').hide();
 
-            // ΝΕΟ: Εμφάνιση του κουμπιού εξόδου
+            // Εμφάνιση του κουμπιού εξόδου
             $('#btn-quit-game').show();
             
             // Ενημέρωση Ονομάτων
             if (data.my_name) $('#name-me').text(data.my_name);
             if (data.opp_name) $('#name-opp').text(data.opp_name);
             
-            // Ενημέρωση τίτλου
-            var sideName = (myPlayerSide === 1) ? " (P1)" : " (P2)";
-            $('.game-title').text('ΞΕΡΗ #' + currentGameId + sideName);
+            // Ενημέρωση τίτλου (Κενός)
+            $('.game-title').text(''); 
 
             // Ζωγραφίζουμε τα πάντα
             renderTable(data.table);
@@ -306,8 +343,7 @@ function fetchBoardData() {
 
 // ---------------------------------------------------------
 // 3. RENDERING FUNCTIONS (ΕΜΦΑΝΙΣΗ)
-// ---------------------------------------------------------
-
+// ... (Κρατάμε τον υπάρχοντα κώδικα ίδιο) ...
 function renderTable(cards) {
     var $tableDiv = $('#table-area');
     $tableDiv.empty();
@@ -402,8 +438,7 @@ function renderDeck(count) {
 
 // ---------------------------------------------------------
 // 4. ΛΟΓΙΚΗ ΣΕΙΡΑΣ (CHECK TURN & BOT)
-// ---------------------------------------------------------
-
+// ... (Κρατάμε τον υπάρχοντα κώδικα ίδιο) ...
 function checkTurn(isMyTurn, gameMode) {
     if (isMyTurn) {
         $('#my-hand').removeClass('disabled');

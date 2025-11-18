@@ -110,4 +110,49 @@ function check_and_redeal($mysqli, $game_id) {
 
     return true; // Έγινε μοίρασμα
 }
+
+// 6. Συνάρτηση για ενημέρωση των στατιστικών του χρήστη (Καλείται μία φορά στο game over)
+function update_user_stats($mysqli, $game_info, $winner) {
+    
+    // 1. Ελέγχουμε αν τα στατιστικά έχουν ήδη ενημερωθεί για αυτό το παιχνίδι
+    if ($game_info['stats_updated'] == 1) {
+        return; 
+    }
+
+    // 2. ΝΕΟΣ ΕΛΕΓΧΟΣ: Ενημέρωση μόνο για PvP παιχνίδια με δύο παίκτες
+    // Αν δεν είναι PvP Ή ο player_2_id είναι κενός (δηλαδή Bot ή Waiting),
+    // σημειώνουμε το παιχνίδι ως 'ενημερωμένο' και επιστρέφουμε.
+    if ($game_info['game_mode'] !== 'pvp' || $game_info['player_2_id'] === null) {
+        $mysqli->query("UPDATE games SET stats_updated = 1 WHERE id = " . $game_info['id']);
+        return;
+    }
+
+    $p1_user_id = $game_info['player_1_id'];
+    $p2_user_id = $game_info['player_2_id']; 
+    
+    // Καθορίζουμε το αποτέλεσμα για τον P1 και P2
+    $p1_result_col = 'draws';
+    $p2_result_col = 'draws';
+    
+    if ($winner === 'player_1') {
+        $p1_result_col = 'wins';
+        $p2_result_col = 'losses';
+    } elseif ($winner === 'player_2') {
+        $p1_result_col = 'losses';
+        $p2_result_col = 'wins';
+    }
+
+    // 3. Ενημέρωση P1
+    if ($p1_user_id) {
+        $mysqli->query("UPDATE users SET $p1_result_col = $p1_result_col + 1 WHERE id = $p1_user_id");
+    }
+
+    // 4. Ενημέρωση P2 
+    if ($p2_user_id && $p2_user_id != 0) {
+        $mysqli->query("UPDATE users SET $p2_result_col = $p2_result_col + 1 WHERE id = $p2_user_id");
+    }
+
+    // 5. Σημειώνουμε το παιχνίδι ως "ενημερωμένο"
+    $mysqli->query("UPDATE games SET stats_updated = 1 WHERE id = " . $game_info['id']);
+}
 ?>

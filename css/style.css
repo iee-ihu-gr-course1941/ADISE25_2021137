@@ -36,7 +36,7 @@ h1 {
     z-index: 100; /* Να είναι πάνω από όλα */
 }
 
-/* ΝΕΟ: Στυλ για το κουμπί εξόδου (Τοποθετείται στην κάτω αριστερή γωνία) */
+/* ΝΕΟ: Στυλ για το κουμπί εξόδου παιχνιδιού (Τοποθετείται στην κάτω αριστερή γωνία) */
 #btn-quit-game {
     position: fixed; 
     bottom: 20px; 
@@ -90,8 +90,8 @@ h1 {
     display: flex; 
     flex-direction: row; 
     align-items: baseline;
-    gap: 8px;
-    min-width: 250px; /* <--- Η ΚΥΡΙΑ ΔΙΟΡΘΩΣΗ: Σταθερό ελάχιστο πλάτος */
+    gap: 8px; 
+    min-width: 270px; /* Σταθερό πλάτος για συμμετρία */
     
     line-height: 1.2;
     white-space: nowrap; 
@@ -263,17 +263,42 @@ button:hover {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(20, 50, 35, 0.95); /* Σκούρο πράσινο, σχεδόν αδιαφανές */
-    z-index: 2000; 
+    background-color: rgba(20, 50, 35, 0.95);
+    z-index: 2000;
     display: flex; 
+    justify-content: center; /* Κεντράρει το menu-container */
+    align-items: center;
+    padding: 0 50px; /* Προσθέτει padding για να μην κολλάει η stats-box στις άκρες */
+}
+
+/* ΝΕΟ: Container για να κρατήσει το μενού και τα στατιστικά μαζί (Οριζόντια διάταξη) */
+.menu-container {
+    display: flex;
+    flex-direction: column; /* Τα στοιχεία μπαίνουν σε στήλη */
     justify-content: center;
     align-items: center;
-    flex-direction: column;
+    height: 100%;
+    width: 100%; /* Γίνεται το reference point για το absolute positioning */
 }
+
 
 .menu-content {
     text-align: center;
     animation: fadeIn 1s ease-in;
+}
+
+/* ΝΕΟ: Στυλ για το κουμπί εξόδου λογαριασμού */
+.logout-btn {
+    width: 250px; 
+    margin-top: 30px; /* Δίνει χώρο από τα κουμπιά του mode */
+    padding: 10px;
+    font-size: 18px;
+    background: #505050; /* Διαφορετικό χρώμα από το κεντρικό Play */
+    border: 1px solid #999;
+}
+
+.logout-btn:hover {
+    background: #707070;
 }
 
 .menu-title {
@@ -311,20 +336,6 @@ button:hover {
     transform: scale(1.05);
 }
 
-.logout-btn {
-    /* Εμφάνιση παρόμοια με menu-btn, αλλά πιο διακριτική */
-    width: 250px; 
-    margin-top: 30px; /* Δίνει χώρο από τα κουμπιά του mode */
-    padding: 10px;
-    font-size: 18px;
-    background: #505050; /* Διαφορετικό χρώμα από το κεντρικό Play */
-    border: 1px solid #999;
-}
-
-.logout-btn:hover {
-    background: #707070;
-}
-
 /* Animation εμφάνισης */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(-20px); }
@@ -335,6 +346,63 @@ button:hover {
 #main-menu.hidden {
     display: none;
 }
+
+/* ΝΕΟ: Στυλ για το πλαίσιο στατιστικών */
+#stats-box {
+    position: absolute; /* <--- Η ΚΥΡΙΑ ΑΛΛΑΓΗ */
+    top: 50%;
+    right: 50px; /* 50px απόσταση από τη δεξιά άκρη */
+    transform: translateY(-50%); /* Κεντράρισμα στον κάθετο άξονα */
+    
+    /* Κρατάμε τα υπόλοιπα στυλ */
+    background-color: rgba(0, 0, 0, 0.6);
+    padding: 20px 30px;
+    border-radius: 15px;
+    border: 1px solid #ffd700;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+    width: 250px; 
+    animation: fadeIn 1.5s ease-in;
+    margin-top: 0; /* Αφαιρούμε το margin-top που υπήρχε */
+}
+
+#stats-box h2 {
+    color: #ffd700;
+    font-size: 24px;
+    margin-top: 0;
+    margin-bottom: 20px;
+    text-shadow: 1px 1px 3px black;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
+}
+
+.stat-item:last-child {
+    border-bottom: none;
+    margin-top: 10px;
+    padding-top: 15px;
+    border-top: 2px solid #ffd700; 
+}
+
+.stat-label {
+    font-weight: normal;
+    font-size: 16px;
+    color: #ddd;
+}
+
+.stat-value {
+    font-weight: bold;
+    font-size: 18px;
+}
+
+.stat-value.win { color: #32cd32; }   
+.stat-value.loss { color: #ff4d4d; }  
+.stat-value.draw { color: #00ffea; } 
+.stat-value.total { color: #ffd700; } 
+
 
 /* --- LOGIN / SIGNUP STYLES --- */
 .auth-form-container {
@@ -392,6 +460,26 @@ button:hover {
 /* --- RESPONSIVE ΡΥΘΜΙΣΕΙΣ ΓΙΑ ΚΙΝΗΤΑ --- */
 
 /* Όταν η οθόνη είναι μικρότερη από 600px (δηλαδή κινητά) */
+@media (max-width: 800px) {
+    /* Επαναφορά positioning για μικρές οθόνες */
+    #stats-box {
+        position: relative;
+        top: auto;
+        right: auto;
+        transform: none;
+        width: 90%;
+        max-width: 350px;
+        margin-top: 30px; /* Προσθέτουμε κενό από τα κουμπιά */
+    }
+    
+    .menu-container {
+        /* Revert flex-direction to column to stack elements */
+        flex-direction: column; 
+        gap: 30px;
+        /* The main-menu centering will center all items in the column */
+    }
+}
+
 @media (max-width: 600px) {
     
     /* 1. Μικραίνουμε τα κενά ανάμεσα στις ζώνες */
@@ -467,7 +555,7 @@ button:hover {
         padding: 5px 15px; 
         font-size: 14px;
         flex-direction: row; 
-        min-width: 160px; /* Μικρότερο min-width για κινητά */
+        min-width: 170px; /* Μικρότερο min-width για κινητά */
     }
     
     /* Προσαρμογή κουμπιού εξόδου για κινητά */
