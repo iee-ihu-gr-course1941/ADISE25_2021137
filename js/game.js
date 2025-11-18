@@ -116,16 +116,22 @@ function fetchBoardData() {
                 $('#waiting-screen').hide();
                 $('#game-over-screen').css('display', 'flex'); // Εμφάνιση οθόνης τέλους
                 
-                // Μήνυμα Νίκης/Ήττας
+                // Μήνυμα Νίκης/Ήττας/Ισοπαλίας
                 $('#go-title').text(data.final_message); 
                 
-                if (data.winner === 'me') $('#go-title').css('color', '#32cd32'); // Πράσινο
-                else if (data.winner === 'opponent') $('#go-title').css('color', '#ff4d4d'); // Κόκκινο
-                else $('#go-title').css('color', 'gold'); // Ισοπαλία
+                if (data.winner === 'me') {
+                    $('#go-title').css('color', '#32cd32'); // Πράσινο για νίκη
+                } else if (data.winner === 'opponent') {
+                    $('#go-title').css('color', '#ff4d4d'); // Κόκκινο για ήττα
+                } else {
+                    $('#go-title').css('color', 'gold'); // Χρυσό για ισοπαλία
+                }
 
-                // Τελικά Σκορ
+                // Τελικά Σκορ και Αριθμός Καρτών
                 $('#go-my-score').text(data.my_score);
                 $('#go-opp-score').text(data.opp_score);
+                $('#go-my-cards').text(data.my_cards);
+                $('#go-opp-cards').text(data.opp_cards);
                 
                 // Σταματάμε το polling
                 if (pollingInterval) clearInterval(pollingInterval);

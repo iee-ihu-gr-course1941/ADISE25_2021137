@@ -17,7 +17,7 @@ $my_pile_col = "score_p" . $my_side;
 $opp_pile_col = "score_p" . $opp_side;
 
 // --- ΕΛΕΓΧΟΣ STATUS ΠΑΙΧΝΙΔΙΟΥ ---
-$sql_game = "SELECT game_status, current_turn_id, p1_bonus_points, p2_bonus_points FROM games WHERE id = $game_id";
+$sql_game = "SELECT game_status, current_turn_id, p1_bonus_points, p2_bonus_points, game_mode FROM games WHERE id = $game_id";
 $game_info = $mysqli->query($sql_game)->fetch_assoc();
 
 if ($game_info['game_status'] === 'waiting') {
@@ -30,14 +30,63 @@ if ($game_info['game_status'] === 'waiting') {
 function calculate_points($mysqli, $gid, $pos) {
     $res = $mysqli->query("SELECT card_code FROM game_cards WHERE game_id=$gid AND card_position='$pos'");
     $pts = 0;
+    $card_count = 0;
+    
     while($row = $res->fetch_assoc()) {
+        $card_count++;
         $r = substr($row['card_code'], 1);
         $c = $row['card_code'];
         if ($r === '1') $pts += 1;
         elseif ($c === 'C2') $pts += 1;
         elseif ($c === 'D10') $pts += 2;
     }
-    return $pts;
+    
+    // Επιστρέφουμε και τους πόντους και τον αριθμό καρτών
+    return ['points' => $pts, 'count' => $card_count];
+}
+
+// --- ΕΛΕΓΧΟΣ ΓΙΑ ΤΕΛΟΣ ΠΑΙΧΝΙΔΙΟΥ ---
+if ($game_info['game_status'] === 'finished') {
+    
+    // Υπολογισμός τελικών πόντων
+    $my_data = calculate_points($mysqli, $game_id, $my_pile_col);
+    $opp_data = calculate_points($mysqli, $game_id, $opp_pile_col);
+    
+    $my_bonus = ($my_side == 1) ? intval($game_info['p1_bonus_points']) : intval($game_info['p2_bonus_points']);
+    $opp_bonus = ($opp_side == 1) ? intval($game_info['p1_bonus_points']) : intval($game_info['p2_bonus_points']);
+    
+    $my_final_score = $my_data['points'] + $my_bonus;
+    $opp_final_score = $opp_data['points'] + $opp_bonus;
+    
+    // Μπόνους για περισσότερα χαρτιά (3 πόντοι)
+    if ($my_data['count'] > $opp_data['count']) {
+        $my_final_score += 3;
+    } elseif ($opp_data['count'] > $my_data['count']) {
+        $opp_final_score += 3;
+    }
+    
+    // Καθορισμός νικητή
+    $winner = 'draw';
+    $final_message = 'ΙΣΟΠΑΛΙΑ!';
+    
+    if ($my_final_score > $opp_final_score) {
+        $winner = 'me';
+        $final_message = 'ΝΙΚΗΣΕΣ!';
+    } elseif ($opp_final_score > $my_final_score) {
+        $winner = 'opponent';
+        $final_message = 'ΕΧΑΣΕΣ!';
+    }
+    
+    echo json_encode([
+        'status' => 'finished',
+        'winner' => $winner,
+        'final_message' => $final_message,
+        'my_score' => $my_final_score,
+        'opp_score' => $opp_final_score,
+        'my_cards' => $my_data['count'],
+        'opp_cards' => $opp_data['count']
+    ]);
+    exit;
 }
 
 // 1. Τραπέζι
@@ -57,14 +106,17 @@ $opponent_count = $mysqli->query("SELECT COUNT(*) as c FROM game_cards WHERE gam
 $my_bonus = ($my_side == 1) ? $game_info['p1_bonus_points'] : $game_info['p2_bonus_points'];
 $opp_bonus = ($opp_side == 1) ? $game_info['p1_bonus_points'] : $game_info['p2_bonus_points'];
 
-$my_score = intval($my_bonus) + calculate_points($mysqli, $game_id, $my_pile_col);
-$opp_score = intval($opp_bonus) + calculate_points($mysqli, $game_id, $opp_pile_col);
+$my_data = calculate_points($mysqli, $game_id, $my_pile_col);
+$opp_data = calculate_points($mysqli, $game_id, $opp_pile_col);
 
-$my_pile_count = $mysqli->query("SELECT COUNT(*) as c FROM game_cards WHERE game_id=$game_id AND card_position='$my_pile_col'")->fetch_assoc()['c'];
-$opp_pile_count = $mysqli->query("SELECT COUNT(*) as c FROM game_cards WHERE game_id=$game_id AND card_position='$opp_pile_col'")->fetch_assoc()['c'];
+$my_score = intval($my_bonus) + $my_data['points'];
+$opp_score = intval($opp_bonus) + $opp_data['points'];
+
+$my_pile_count = $my_data['count'];
+$opp_pile_count = $opp_data['count'];
 
 // 5. Σειρά & Deck
-$is_my_turn = ($game_info['current_turn_id'] == $my_side); // Ελέγχουμε αν το νούμερο ταιριάζει με το δικό μας Side
+$is_my_turn = ($game_info['current_turn_id'] == $my_side);
 $deck_count = $mysqli->query("SELECT COUNT(*) as c FROM game_cards WHERE game_id=$game_id AND card_position='deck'")->fetch_assoc()['c'];
 
 echo json_encode([
@@ -77,6 +129,7 @@ echo json_encode([
     'my_pile_count' => $my_pile_count,
     'opp_score' => $opp_score,
     'opp_pile_count' => $opp_pile_count,
-    'is_my_turn' => $is_my_turn
+    'is_my_turn' => $is_my_turn,
+    'game_mode' => $game_info['game_mode']
 ]);
 ?>

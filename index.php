@@ -36,17 +36,18 @@ require_once 'db.php'; // Μόνο η σύνδεση χρειάζεται (γι�
         <p>Μην κλείσεις τη σελίδα.</p>
     </div>
 
-        <!-- GAME OVER SCREEN -->
-    <div id="game-over-screen" style="display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); z-index: 3000; color: white; flex-direction: column; justify-content: center; align-items: center;">
+    <!-- GAME OVER SCREEN -->
+    <div id="game-over-screen" style="display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.95); z-index: 3000; color: white; flex-direction: column; justify-content: center; align-items: center;">
         
-        <h1 id="go-title" style="font-size: 60px; margin-bottom: 10px; text-shadow: 0 0 20px gold;">ΤΕΛΟΣ ΠΑΙΧΝΙΔΙΟΥ</h1>
+        <h1 id="go-title" style="font-size: 70px; margin-bottom: 30px; text-shadow: 0 0 30px currentColor; animation: fadeIn 1s;">ΝΙΚΗΣΕΣ!</h1>
         
-        <div style="font-size: 30px; margin-bottom: 40px; text-align: center;">
-            <div style="margin-bottom: 10px;">Εσύ: <span id="go-my-score" style="color: #00ffea; font-weight: bold;">0</span></div>
-            <div>Αντίπαλος: <span id="go-opp-score" style="color: #ff4d4d; font-weight: bold;">0</span></div>
+        <div style="font-size: 32px; margin-bottom: 20px; text-align: center; background: rgba(255,255,255,0.1); padding: 30px 50px; border-radius: 15px; animation: fadeIn 1.5s;">
+            <div style="margin-bottom: 15px; font-size: 24px; color: #aaa;">ΤΕΛΙΚΑ ΣΚΟΡ</div>
+            <div style="margin-bottom: 15px;">Εσύ: <span id="go-my-score" style="color: #00ffea; font-weight: bold; font-size: 40px;">0</span> (<span id="go-my-cards">0</span> χαρτιά)</div>
+            <div>Αντίπαλος: <span id="go-opp-score" style="color: #ff4d4d; font-weight: bold; font-size: 40px;">0</span> (<span id="go-opp-cards">0</span> χαρτιά)</div>
         </div>
 
-        <button onclick="location.reload()" class="menu-btn" style="background-color: #28a745;">ΠΑΙΞΕ ΞΑΝΑ</button>
+        <button onclick="location.reload()" class="menu-btn" style="background-color: #28a745; animation: fadeIn 2s; font-size: 24px; padding: 20px 40px;">ΠΑΙΞΕ ΞΑΝΑ</button>
     </div>
 
     <!-- UI LAYER (Σκορ & Τίτλος) -->
