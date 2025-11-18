@@ -5,21 +5,131 @@ var pollingInterval = null;     // Το χρονόμετρο για την αν�
 var myPlayerSide = 1;           // Ποιος είμαι; (1 ή 2). Default 1.
 var currentGameId = null;       // Το ID του παιχνιδιού
 
-$(document).ready(function() {
-    // --- EVENT LISTENERS ΓΙΑ ΤΟ ΜΕΝΟΥ ---
-    
-    // 1. Κλικ στο αρχικό "ΠΑΙΞΕ"
-    $('#btn-play-main').on('click', function() {
-        $(this).hide(); // Κρύβουμε το κουμπί Play
-        $('#mode-selector').fadeIn(); // Εμφάνισε τις επιλογές
-    });
+// ---------------------------------------------------------
+// AUTHENTICATION LOGIC (Global Functions used by index.php)
+// ---------------------------------------------------------
 
-    // 2. Κλικ σε επιλογή Mode (PvE ή PvP)
-    $('.mode-btn').on('click', function() {
-        var mode = $(this).data('mode'); // 'pve' ή 'pvp'
-        initGame(mode);
-    });
+function togglePass(id) {
+    var x = document.getElementById(id);
+    var icon = $(`#${id}`).siblings('i.fa-eye, i.fa-eye-slash');
+    
+    if (x.type === "password") {
+        x.type = "text";
+        icon.removeClass('fa-eye').addClass('fa-eye-slash');
+    } else {
+        x.type = "password";
+        icon.removeClass('fa-eye-slash').addClass('fa-eye');
+    }
+}
+function showSignup() { 
+    $('#login-form').hide(); 
+    $('#signup-form').fadeIn(); 
+}
+function showLogin() { 
+    $('#signup-form').hide(); 
+    $('#login-form').fadeIn(); 
+}
+function doLogin() {
+    $.post('api/login.php', {
+        username: $('#l-user').val(),
+        password: $('#l-pass').val()
+    }, function(res) {
+        if(res.status === 'success') location.reload();
+        else alert(res.error);
+    }, 'json');
+}
+function doSignup() {
+    $.post('api/signup.php', {
+        username: $('#s-user').val(),
+        password: $('#s-pass').val(),
+        password_confirm: $('#s-pass-conf').val()
+    }, function(res) {
+        if(res.status === 'success') {
+            alert("Επιτυχία εγγραφής! Τώρα συνδέσου.");
+            showLogin();
+        } else {
+            alert(res.error);
+        }
+    }, 'json');
+}
+
+// ΝΕΑ ΣΥΝΑΡΤΗΣΗ: Χειρισμός αποσύνδεσης
+function doLogout() {
+    if (confirm("Είσαι σίγουρος/η ότι θέλεις να αποσυνδεθείς;")) {
+        $.ajax({
+            url: 'api/logout.php',
+            type: 'POST',
+            dataType: 'json',
+            success: function(response) {
+                // Επαναφόρτωση της σελίδας για να εμφανιστεί η οθόνη σύνδεσης
+                location.reload(); 
+            },
+            error: function() {
+                alert("Σφάλμα κατά την αποσύνδεση. Παρακαλώ δοκιμάστε να ανανεώσετε τη σελίδα.");
+                location.reload(); 
+            }
+        });
+    }
+}
+
+
+$(document).ready(function() {
+    
+    // Εάν δεν υπάρχει η φόρμα σύνδεσης/εγγραφής, σημαίνει ότι είμαστε ήδη συνδεδεμένοι.
+    if ($('#auth-screen').length === 0) {
+
+        // --- EVENT LISTENERS ΓΙΑ ΤΟ ΜΕΝΟΥ ---
+        // 1. Κλικ στο αρχικό "ΠΑΙΞΕ"
+        $('#btn-play-main').on('click', function() {
+            $(this).hide(); // Κρύβουμε το κουμπί Play
+            $('#mode-selector').fadeIn(); // Εμφάνισε τις επιλογές
+        });
+
+        // 2. Κλικ σε επιλογή Mode (PvE ή PvP)
+        $('.mode-btn').on('click', function() {
+            var mode = $(this).data('mode'); // 'pve' ή 'pvp'
+            initGame(mode);
+        });
+        
+        // Απόκρυψη του κουμπιού εξόδου στην αρχή
+        $('#btn-quit-game').hide();
+    }
 });
+
+
+// ---------------------------------------------------------
+// NEW: ΛΟΓΙΚΗ ΕΞΟΔΟΥ (QUIT GAME)
+// ---------------------------------------------------------
+
+function quitGame() {
+    if (!currentGameId) return;
+
+    if (!confirm("Είσαι σίγουρος/η ότι θέλεις να τερματίσεις το παιχνίδι;")) {
+        return;
+    }
+
+    // Σταματάμε το polling αμέσως
+    if (pollingInterval) clearInterval(pollingInterval);
+
+    $.ajax({
+        url: 'api/quit_game.php',
+        type: 'POST',
+        data: { 
+            game_id: currentGameId,
+            player_side: myPlayerSide 
+        },
+        dataType: 'json',
+        success: function(response) {
+            alert(response.message || "Έξοδος επιτυχής.");
+            // Επαναφόρτωση της σελίδας για να επιστρέψει στο Main Menu
+            location.reload(); 
+        },
+        error: function() {
+            alert("Σφάλμα κατά τον τερματισμό του παιχνιδιού. Παρακαλώ δοκιμάστε να ανανεώσετε τη σελίδα.");
+            location.reload();
+        }
+    });
+}
 
 
 // ---------------------------------------------------------
@@ -36,13 +146,15 @@ function initGame(mode) {
             data: { mode: 'pve' },
             dataType: 'json',
             success: function(response) {
+                if (response.error) {
+                    alert("Σφάλμα: " + response.error);
+                    return;
+                }
                 $('#main-menu').addClass('hidden');
                 currentGameId = response.game_id;
                 
                 // Στο PvE είμαστε πάντα ο Παίκτης 1
                 myPlayerSide = 1; 
-                console.log("Είμαι ο Παίκτης: " + myPlayerSide);
-                
                 startPolling();
             },
             error: function() {
@@ -60,18 +172,26 @@ function initGame(mode) {
             type: 'POST',
             dataType: 'json',
             success: function(response) {
+                // ΕΛΕΓΧΟΣ ΓΙΑ ΣΦΑΛΜΑ JOIN Ή ΑΣΤΟΧΙΑ
+                if (response.error || response.status === 'error') {
+                    alert("Σφάλμα εύρεσης παιχνιδιού: " + response.error);
+                    $('#waiting-screen').hide();
+                    $('#main-menu').removeClass('hidden'); // Επιστροφή στο μενού
+                    return;
+                }
+                
                 currentGameId = response.game_id;
                 
-                // ΑΠΟΘΗΚΕΥΣΗ ΤΟΥ ΡΟΛΟΥ ΜΟΥ (1 ή 2) - ΠΟΛΥ ΣΗΜΑΝΤΙΚΟ
+                // ΑΠΟΘΗΚΕΥΣΗ ΤΟΥ ΡΟΛΟΥ ΜΟΥ (1 ή 2)
                 myPlayerSide = response.player_side;
-                console.log("PvP Joined. Είμαι ο Παίκτης: " + myPlayerSide);
 
-                if (response.status === 'joined') {
-                    $('#waiting-screen').hide();
+                if (response.status === 'joined' || response.status === 'waiting') {
+                    $('#waiting-screen').hide(); // Το κρύβουμε αν μπήκαμε/βρήκαμε game
                 }
                 startPolling();
             },
-            error: function() {
+            error: function(xhr, status, error) {
+                console.error("Σφάλμα κατά την αναζήτηση παιχνιδιού:", error);
                 alert("Σφάλμα κατά την αναζήτηση παιχνιδιού.");
                 $('#waiting-screen').hide();
                 $('#main-menu').removeClass('hidden'); // Επιστροφή στο μενού
@@ -93,7 +213,11 @@ function startPolling() {
 // 2. ΚΥΡΙΑ ΛΟΓΙΚΗ ΑΝΑΝΕΩΣΗΣ (POLLING)
 // ---------------------------------------------------------
 function fetchBoardData() {
-    if (!currentGameId) return;
+    // ΝΕΟ: Αν δεν υπάρχει ενεργό παιχνίδι, κρύψε το κουμπί εξόδου
+    if (!currentGameId) {
+        $('#btn-quit-game').hide(); 
+        return;
+    }
 
     $.ajax({
         url: 'api/get_board.php',
@@ -104,27 +228,38 @@ function fetchBoardData() {
         },
         dataType: 'json',
         success: function(data) {
+            
+            if (data.error) { 
+                console.error("Game data error:", data.error);
+                return;
+            }
+
             // A. Έλεγχος για αναμονή αντιπάλου (PvP)
             if (data.status === 'waiting_for_opponent') {
                 $('#waiting-screen').show();
+                // Ενημέρωση τίτλου
                 $('#waiting-screen h2').html('Αναζήτηση Αντιπάλου...<br><small>Game ID: ' + currentGameId + '</small>');
+                $('#btn-quit-game').hide(); // Κρύψε το κουμπί αναμονής
                 return; 
             }
             
             // B. Έλεγχος για ΤΕΛΟΣ ΠΑΙΧΝΙΔΙΟΥ (Game Over)
             if (data.status === 'finished') {
                 $('#waiting-screen').hide();
-                $('#game-over-screen').css('display', 'flex'); // Εμφάνιση οθόνης τέλους
+                $('#game-over-screen').css('display', 'flex'); 
                 
+                // ΝΕΟ: Κρύψε το κουμπί στο game over
+                $('#btn-quit-game').hide(); 
+
                 // Μήνυμα Νίκης/Ήττας/Ισοπαλίας
                 $('#go-title').text(data.final_message); 
                 
                 if (data.winner === 'me') {
-                    $('#go-title').css('color', '#32cd32'); // Πράσινο για νίκη
+                    $('#go-title').css('color', '#32cd32'); 
                 } else if (data.winner === 'opponent') {
-                    $('#go-title').css('color', '#ff4d4d'); // Κόκκινο για ήττα
+                    $('#go-title').css('color', '#ff4d4d'); 
                 } else {
-                    $('#go-title').css('color', 'gold'); // Χρυσό για ισοπαλία
+                    $('#go-title').css('color', 'gold'); 
                 }
 
                 // Τελικά Σκορ και Αριθμός Καρτών
@@ -141,8 +276,15 @@ function fetchBoardData() {
             // Γ. Κανονική Ροή Παιχνιδιού
             $('#waiting-screen').hide();
 
+            // ΝΕΟ: Εμφάνιση του κουμπιού εξόδου
+            $('#btn-quit-game').show();
+            
+            // Ενημέρωση Ονομάτων
+            if (data.my_name) $('#name-me').text(data.my_name);
+            if (data.opp_name) $('#name-opp').text(data.opp_name);
+            
             // Ενημέρωση τίτλου
-            var sideName = (myPlayerSide === 1) ? " (Εγώ: P1)" : " (Εγώ: P2)";
+            var sideName = (myPlayerSide === 1) ? " (P1)" : " (P2)";
             $('.game-title').text('ΞΕΡΗ #' + currentGameId + sideName);
 
             // Ζωγραφίζουμε τα πάντα
@@ -156,7 +298,7 @@ function fetchBoardData() {
             checkTurn(data.is_my_turn, data.game_mode);
         },
         error: function(xhr, status, error) {
-            console.error("Σφάλμα σύνδεσης:", error);
+            console.error("Σφάλμα σύνδεσης/Polling:", error);
         }
     });
 }
@@ -171,7 +313,7 @@ function renderTable(cards) {
     $tableDiv.empty();
 
     if (cards.length === 0) {
-        $tableDiv.html('<p style="opacity:0.5">Το τραπέζι είναι άδειο</p>');
+        $tableDiv.html('<p style="opacity:0.5; color:rgba(255,255,255,0.7);">Το τραπέζι είναι άδειο</p>');
         return;
     }
 
@@ -221,13 +363,13 @@ function renderPiles(myScore, oppScore, myCount, oppCount) {
     var $myPile = $('#my-pile');
     $myPile.empty();
     
-    // Εμφανίζουμε εικόνα αν έχω έστω και 1 κάρτα (χωρίς νούμερο μέσα)
+    // Εμφανίζουμε εικόνα αν έχω έστω και 1 κάρτα
     if (myC > 0) {
         $myPile.addClass('has-cards'); 
     } else {
         $myPile.removeClass('has-cards');
     }
-    // Το σκορ ενημερώνεται ΜΟΝΟ στην μπάρα ψηλά
+    // Το σκορ ενημερώνεται στην μπάρα ψηλά
     $('#score-me').text(myScore);
 
 
@@ -250,6 +392,7 @@ function renderDeck(count) {
     if (count > 0) {
         $deck.addClass('has-cards'); 
         $deck.html('<span>' + count + '</span>');
+        $deck.css('border', 'none'); 
     } else {
         $deck.removeClass('has-cards');
         $deck.css('border', '2px dashed rgba(255,255,255,0.2)');
@@ -296,6 +439,7 @@ function triggerBotPlay() {
             },
             error: function() {
                 botThinking = false;
+                setTimeout(triggerBotPlay, 5000); 
             }
         });
     }, 1500);
@@ -306,14 +450,16 @@ function playCard(cardId) {
     if ($('#my-hand').hasClass('disabled')) return;
 
     $('body').addClass('playing');
-    console.log("Παίζω το χαρτί ID: " + cardId);
+    
+    // Αφαιρούμε τα click events για όσο παίζει
+    $('.my-card').off('click'); 
 
     $.ajax({
         url: 'api/play_card.php',
         type: 'POST',
         data: { 
             card_id: cardId,
-            player_side: myPlayerSide // <--- ΣΤΕΛΝΟΥΜΕ ΤΟ ID ΜΑΣ!
+            player_side: myPlayerSide 
         },
         dataType: 'json',
         success: function(response) {
@@ -324,14 +470,20 @@ function playCard(cardId) {
             } else {
                 console.log(response.message);
                 if (response.is_xeri) {
-                    alert(response.message); 
+                    setTimeout(function(){
+                        alert(response.message);
+                        fetchBoardData();
+                    }, 500); 
+                } else {
+                    fetchBoardData();
                 }
-                fetchBoardData();
             }
         },
         error: function(xhr, status, error) {
             $('body').removeClass('playing');
             console.error("Error playing card:", error);
+            alert("Σφάλμα κίνησης. Δοκίμασε ξανά.");
+            fetchBoardData(); 
         }
     });
 }

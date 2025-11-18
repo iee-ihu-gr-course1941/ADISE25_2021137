@@ -9,37 +9,69 @@ require_once 'db.php'; // Μόνο η σύνδεση χρειάζεται (γι�
     <title>Ξερή - Ελληνικό Παιχνίδι</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
 
-    <!-- ΚΕΝΤΡΙΚΟ ΜΕΝΟΥ (Overlay) -->
-    <div id="main-menu">
+    <?php if (!isset($_SESSION['user_id'])): ?>
+    
+    <div id="auth-screen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#204030; z-index:5000; display:flex; justify-content:center; align-items:center; flex-direction:column;">
+        <h1 class="menu-title">ΞΕΡΗ</h1>
+
+        <div id="login-form" class="menu-content auth-form-container">
+            <h2>Σύνδεση</h2>
+            <input type="text" id="l-user" placeholder="Username">
+            <div class="pass-wrapper">
+                <input type="password" id="l-pass" placeholder="Password">
+                <i class="fas fa-eye" onclick="togglePass('l-pass')"></i>
+            </div>
+            <button class="menu-btn" onclick="doLogin()">ΕΙΣΟΔΟΣ</button>
+            <p>Δεν έχεις λογαριασμό; <button class="link-btn" onclick="showSignup()">Εγγραφή</button></p>
+        </div>
+
+        <div id="signup-form" class="menu-content auth-form-container" style="display:none;">
+            <h2>Εγγραφή</h2>
+            <input type="text" id="s-user" placeholder="Username">
+            <div class="pass-wrapper">
+                <input type="password" id="s-pass" placeholder="Password">
+                <i class="fas fa-eye" onclick="togglePass('s-pass')"></i>
+            </div>
+            <div class="pass-wrapper">
+                <input type="password" id="s-pass-conf" placeholder="Confirm Password">
+                <i class="fas fa-eye" onclick="togglePass('s-pass-conf')"></i>
+            </div>
+            <button class="menu-btn" onclick="doSignup()">ΕΓΓΡΑΦΗ</button>
+            <p>Έχεις λογαριασμό; <button class="link-btn" onclick="showLogin()">Σύνδεση</button></p>
+        </div>
+    </div>
+    
+    <?php endif; ?>
+
+    <div id="main-menu" <?php if (!isset($_SESSION['user_id'])) echo 'class="hidden"'; ?>>
         <div class="menu-content">
             <h1 class="menu-title">ΞΕΡΗ</h1>
-            <p class="menu-subtitle">Το κλασικό ελληνικό παιχνίδι</p>
+            <p class="menu-subtitle">Καλωσήρθες, <?php echo isset($_SESSION['username']) ? $_SESSION['username'] : 'Παίκτη'; ?></p>
             
-            <!-- Αρχικό Κουμπί -->
             <button id="btn-play-main" class="menu-btn">ΠΑΙΞΕ</button>
             
-            <!-- Επιλογή Mode (Αρχικά κρυφό) -->
             <div id="mode-selector" style="display: none;">
                 <button class="menu-btn mode-btn" data-mode="pve">VS COMPUTER</button>
                 <button class="menu-btn mode-btn" data-mode="pvp">VS PLAYER 2</button>
             </div>
+            
+            <button id="btn-logout" class="menu-btn logout-btn" onclick="doLogout()">ΕΞΟΔΟΣ ΑΠΟ ΛΟΓΑΡΙΑΣΜΟ</button>
         </div>
     </div>
 
-    <!-- WAITING SCREEN (Μπαίνει κάτω από το Main Menu) -->
     <div id="waiting-screen" style="display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); z-index: 1500; color: white; flex-direction: column; justify-content: center; align-items: center;">
         <h2 style="color: #00ffea; text-align: center;">Αναζήτηση Αντιπάλου...</h2>
         <div style="font-size: 40px; margin-top: 20px;">⏳</div>
         <p>Μην κλείσεις τη σελίδα.</p>
     </div>
 
-    <!-- GAME OVER SCREEN -->
     <div id="game-over-screen" style="display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.95); z-index: 3000; color: white; flex-direction: column; justify-content: center; align-items: center;">
         
-        <h1 id="go-title" style="font-size: 70px; margin-bottom: 30px; text-shadow: 0 0 30px currentColor; animation: fadeIn 1s;">ΝΙΚΗΣΕΣ!</h1>
+        <h1 id="go-title" style="font-size: 70px; margin-bottom: 30px; text-shadow: 0 0 30px currentColor; animation: fadeIn 1s;"></h1>
         
         <div style="font-size: 32px; margin-bottom: 20px; text-align: center; background: rgba(255,255,255,0.1); padding: 30px 50px; border-radius: 15px; animation: fadeIn 1.5s;">
             <div style="margin-bottom: 15px; font-size: 24px; color: #aaa;">ΤΕΛΙΚΑ ΣΚΟΡ</div>
@@ -49,69 +81,71 @@ require_once 'db.php'; // Μόνο η σύνδεση χρειάζεται (γι�
 
         <button onclick="location.reload()" class="menu-btn" style="background-color: #28a745; animation: fadeIn 2s; font-size: 24px; padding: 20px 40px;">ΠΑΙΞΕ ΞΑΝΑ</button>
     </div>
+    
+    <button class="exit-btn" id="btn-quit-game" onclick="quitGame()" style="display:none;">ΕΞΟΔΟΣ</button>
 
-    <!-- UI LAYER (Σκορ & Τίτλος) -->
     <div id="ui-layer">
+        
         <div class="score-box opponent-score">
-            Αντίπαλος: <span id="score-opp">0</span>
+            <span id="name-opp" class="player-name-text">Αντίπαλος</span>
+            <span class="score-text">Σκορ: <span id="score-opp">0</span></span>
         </div>
         
-        <div class="game-title">ΞΕΡΗ</div>
+        <div class="game-title-container">
+            <div class="game-title">ΞΕΡΗ</div>
+        </div>
 
         <div class="score-box my-score">
-            Εγώ: <span id="score-me">0</span>
+            <span id="name-me" class="player-name-text">Εγώ</span>
+            <span class="score-text">Σκορ: <span id="score-me">0</span></span>
         </div>
     </div>
 
-    <!-- ΤΟ ΤΡΑΠΕΖΙ ΤΟΥ ΠΑΙΧΝΙΔΙΟΥ -->
     <div id="game-board">
         
-        <!-- Περιοχή Αντιπάλου (Πάνω) -->
         <div class="player-zone">
-            <!-- Η Στοίβα του Αντιπάλου (Αριστερά) -->
             <div id="opponent-pile" class="score-pile"></div>
             
             <div id="opponent-hand">
-                <!-- Κάρτες αντιπάλου... -->
-            </div>
+                </div>
         </div>
 
-        <!-- ΜΕΣΑΙΑ ΖΩΝΗ -->
         <div id="middle-zone" style="display: flex; justify-content: center; align-items: center; gap: 30px;">
             
-            <!-- Η Τράπουλα (Αριστερά) -->
             <div id="draw-pile" class="score-pile">
-                <!-- Εδώ θα μπει η πλάτη -->
-            </div>
+                </div>
 
-            <!-- Το Τραπέζι (Δεξιά) -->
             <div id="table-area">
                 <p>Φόρτωση τραπεζιού...</p>
             </div>
             
         </div>
 
-        <!-- Τα Χαρτιά Μου (Κάτω) -->
         <div class="player-zone">
             <div id="my-hand">
-                 <!-- Κάρτες μου... -->
-            </div>
+                 </div>
 
-            <!-- Η Στοίβα Μου (Δεξιά) -->
             <div id="my-pile" class="score-pile">
-                <!-- Εδώ θα εμφανιστεί η εικόνα της πλάτης αν έχω χαρτιά -->
-            </div>
+                </div>
         </div>
         
         <div id="game-status" style="text-align: center; margin-top: 10px; font-weight: bold; color: gold;"></div>
 
     </div>
 
-    <!-- Αρχικοποίηση μεταβλητής (Κενή στην αρχή) -->
     <script>
-        var currentGameId = null;
-    </script>
+        var currentGameId = null; 
 
+        <?php if (isset($_SESSION['user_id'])): ?>
+            $(document).ready(function() {
+                if (!currentGameId) {
+                    $('#main-menu').removeClass('hidden');
+                }
+            });
+        <?php else: ?>
+            $('#ui-layer, #game-board').hide();
+        <?php endif; ?>
+    </script>
     <script src="js/game.js"></script>
 
 </body>
