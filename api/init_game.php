@@ -1,24 +1,29 @@
 <?php
 // api/init_game.php
+require_once '../db.php';
+require_once 'functions.php';  
 
-require_once '../db.php';      // Σύνδεση στη βάση
-require_once 'functions.php';  // Φόρτωση των εργαλείων μας
+// Διαβάζουμε το mode που έστειλε η JavaScript (αν δεν έστειλε, default 'pve')
+$mode = isset($_POST['mode']) ? $_POST['mode'] : 'pve';
 
-// --- ΕΚΤΕΛΕΣΗ ---
+// 1. Φτιάξε νέο παιχνίδι με το συγκεκριμένο Mode
+$game_id = create_game($mysqli, $mode);
 
-// 1. Φτιάξε νέο παιχνίδι
-$game_id = create_game($mysqli);
-
-// 2. Φτιάξε τράπουλα στη μνήμη
+// 2. Φτιάξε τράπουλα
 $my_deck = generate_shuffled_deck();
 
-// 3. Αποθήκευσέ την στη βάση
+// 3. Αποθήκευσε
 save_deck_to_db($mysqli, $game_id, $my_deck);
 
 // 4. Μοίρασε
 deal_initial_cards($mysqli, $game_id);
 
-// Μήνυμα επιτυχίας (JSON για να το διαβάζει αργότερα η Javascript)
 header('Content-Type: application/json');
-echo json_encode(["status" => "success", "game_id" => $game_id, "message" => "Game initialized and dealt!"]);
+echo json_encode([
+    "status" => "success", 
+    "game_id" => $game_id, 
+    "mode" => $mode,
+    "player_side" => 1,
+    "message" => "Game initialized!"
+]);
 ?>

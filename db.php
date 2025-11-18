@@ -1,4 +1,6 @@
 <?php
+session_Start();
+
 $host = 'localhost';
 $db   = 'xeri_db';
 $user = 'root';
