@@ -89,6 +89,7 @@ require_once 'db.php'; // Μόνο η σύνδεση χρειάζεται (γι�
         <h2 style="color: #00ffea; text-align: center;">Αναζήτηση Αντιπάλου...</h2>
         <div style="font-size: 40px; margin-top: 20px;">⏳</div>
         <p>Μην κλείσεις τη σελίδα.</p>
+        <button id="btn-cancel-pvp" class="menu-btn logout-btn" style="margin-top: 30px; display: none;">ΑΚΥΡΩΣΗ & ΕΠΙΣΤΡΟΦΗ</button>
     </div>
 
     <div id="game-over-screen" style="display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.95); z-index: 3000; color: white; flex-direction: column; justify-content: center; align-items: center;">

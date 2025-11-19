@@ -78,6 +78,7 @@ function doLogout() {
 // ---------------------------------------------------------
 
 function fetchUserStats() {
+    // ΣΗΜΕΙΩΣΗ: Αυτή η λειτουργία απαιτεί το αρχείο api/get_stats.php
     $.ajax({
         url: 'api/get_stats.php',
         type: 'GET',
@@ -112,7 +113,12 @@ $(document).ready(function() {
     
     // Εάν δεν υπάρχει η φόρμα σύνδεσης/εγγραφής, σημαίνει ότι είμαστε ήδη συνδεδεμένοι.
     if ($('#auth-screen').length === 0) {
-
+        
+        // ΝΕΟ: Event listener για το κουμπί ΑΚΥΡΩΣΗΣ
+        $('#btn-cancel-pvp').on('click', function() {
+            cancelMatchmaking();
+        });
+        
         // --- EVENT LISTENERS ΓΙΑ ΤΟ ΜΕΝΟΥ ---
         // 1. Κλικ στο αρχικό "ΠΑΙΞΕ"
         $('#btn-play-main').on('click', function() {
@@ -128,8 +134,10 @@ $(document).ready(function() {
         
         // Απόκρυψη του κουμπιού εξόδου στην αρχή
         $('#btn-quit-game').hide();
+        // ΝΕΟ: Απόκρυψη και του κουμπιού ακύρωσης στην αρχή
+        $('#btn-cancel-pvp').hide(); 
 
-        // Φόρτωσε τα στατιστικά του παίκτη
+        // ΝΕΟ: Φόρτωσε τα στατιστικά του παίκτη
         fetchUserStats(); 
     }
 });
@@ -164,6 +172,51 @@ function quitGame() {
         },
         error: function() {
             alert("Σφάλμα κατά τον τερματισμό του παιχνιδιού. Παρακαλώ δοκιμάστε να ανανεώσετε τη σελίδα.");
+            location.reload();
+        }
+    });
+}
+
+// ---------------------------------------------------------
+// NEW: ΛΟΓΙΚΗ ΑΚΥΡΩΣΗΣ MATCHMAKING (CANCEL)
+// ---------------------------------------------------------
+function cancelMatchmaking() {
+    if (!currentGameId || myPlayerSide !== 1) return; // Μόνο ο P1 μπορεί να ακυρώσει
+
+    // Σταματάμε το polling αμέσως
+    if (pollingInterval) clearInterval(pollingInterval);
+
+    if (!confirm("Είσαι σίγουρος/η ότι θέλεις να ακυρώσεις την αναζήτηση αντιπάλου;")) {
+        startPolling(); // Ξεκινάμε ξανά το polling αν ο χρήστης το ακυρώσει
+        return;
+    }
+
+    $.ajax({
+        url: 'api/cancel_match.php', // ΝΕΟ API ENDPOINT
+        type: 'POST',
+        data: { 
+            game_id: currentGameId
+        },
+        dataType: 'json',
+        success: function(response) {
+            alert(response.message || "Η αναζήτηση ακυρώθηκε.");
+            // Επαναφορά στο Main Menu
+            currentGameId = null;
+            myPlayerSide = 1;
+            $('#waiting-screen').hide();
+            $('#main-menu').removeClass('hidden'); 
+            
+            // Επαναφορά αρχικών κουμπιών μενού
+            $('#btn-play-main').show(); 
+            $('#mode-selector').hide(); 
+            $('#btn-cancel-pvp').hide(); 
+        },
+        error: function(xhr, status, error) {
+            // Προσθήκη logging για debugging του PHP σφάλματος
+            console.error("AJAX Error Status:", status);
+            console.error("AJAX Error XHR response:", xhr.responseText); 
+            
+            alert("Σφάλμα κατά την ακύρωση. Παρακαλώ δοκιμάστε να ανανεώσετε τη σελίδα.");
             location.reload();
         }
     });
@@ -204,7 +257,8 @@ function initGame(mode) {
         // --- ΛΕΙΤΟΥΡΓΙΑ VS PLAYER 2 ---
         $('#main-menu').addClass('hidden');
         $('#waiting-screen').css('display', 'flex'); // Εμφάνιση οθόνης αναμονής
-
+        $('#btn-cancel-pvp').hide();
+        
         $.ajax({
             url: 'api/find_match.php',
             type: 'POST',
@@ -223,9 +277,12 @@ function initGame(mode) {
                 // ΑΠΟΘΗΚΕΥΣΗ ΤΟΥ ΡΟΛΟΥ ΜΟΥ (1 ή 2)
                 myPlayerSide = response.player_side;
 
-                if (response.status === 'joined' || response.status === 'waiting') {
-                    $('#waiting-screen').hide(); // Το κρύβουμε αν μπήκαμε/βρήκαμε game
+                // ΚΡΙΣΙΜΗ ΔΙΟΡΘΩΣΗ: Κρύβουμε την οθόνη αναμονής ΜΟΝΟ αν μπήκαμε σε ενεργό game
+                if (response.status === 'joined') { 
+                    $('#waiting-screen').hide();
                 }
+                // Αν το status είναι 'waiting', το polling (fetchBoardData) θα διαχειριστεί την εμφάνιση
+                
                 startPolling();
             },
             error: function(xhr, status, error) {
@@ -254,6 +311,7 @@ function fetchBoardData() {
     // Αν δεν υπάρχει ενεργό παιχνίδι, κρύψε το κουμπί εξόδου
     if (!currentGameId) {
         $('#btn-quit-game').hide(); 
+        $('#btn-cancel-pvp').hide(); // Να είμαστε σίγουροι
         return;
     }
 
@@ -278,12 +336,21 @@ function fetchBoardData() {
                 // Ενημέρωση τίτλου
                 $('#waiting-screen h2').html('Αναζήτηση Αντιπάλου...<br><small>Game ID: ' + currentGameId + '</small>');
                 $('#btn-quit-game').hide(); // Κρύψε το κουμπί αναμονής
+                
+                // Εμφάνισε το κουμπί ακύρωσης ΜΟΝΟ αν είμαι ο P1
+                if (myPlayerSide === 1) {
+                     $('#btn-cancel-pvp').show();
+                } else {
+                     $('#btn-cancel-pvp').hide();
+                }
+                
                 return; 
             }
             
             // B. Έλεγχος για ΤΕΛΟΣ ΠΑΙΧΝΙΔΙΟΥ (Game Over)
             if (data.status === 'finished') {
                 $('#waiting-screen').hide();
+                $('#btn-cancel-pvp').hide();
                 $('#game-over-screen').css('display', 'flex'); 
                 
                 // Κρύψε το κουμπί στο game over
@@ -313,7 +380,8 @@ function fetchBoardData() {
 
             // Γ. Κανονική Ροή Παιχνιδιού
             $('#waiting-screen').hide();
-
+            $('#btn-cancel-pvp').hide(); // Κρύψε το κουμπί μόλις βρεθεί game
+            
             // Εμφάνιση του κουμπιού εξόδου
             $('#btn-quit-game').show();
             
@@ -321,8 +389,9 @@ function fetchBoardData() {
             if (data.my_name) $('#name-me').text(data.my_name);
             if (data.opp_name) $('#name-opp').text(data.opp_name);
             
-            // Ενημέρωση τίτλου (Κενός)
-            $('.game-title').text(''); 
+            // Ενημέρωση τίτλου
+            var sideName = (myPlayerSide === 1) ? " (P1)" : " (P2)";
+            $('.game-title').text('ΞΕΡΗ #' + currentGameId + sideName);
 
             // Ζωγραφίζουμε τα πάντα
             renderTable(data.table);
@@ -343,7 +412,8 @@ function fetchBoardData() {
 
 // ---------------------------------------------------------
 // 3. RENDERING FUNCTIONS (ΕΜΦΑΝΙΣΗ)
-// ... (Κρατάμε τον υπάρχοντα κώδικα ίδιο) ...
+// ---------------------------------------------------------
+
 function renderTable(cards) {
     var $tableDiv = $('#table-area');
     $tableDiv.empty();
@@ -438,7 +508,8 @@ function renderDeck(count) {
 
 // ---------------------------------------------------------
 // 4. ΛΟΓΙΚΗ ΣΕΙΡΑΣ (CHECK TURN & BOT)
-// ... (Κρατάμε τον υπάρχοντα κώδικα ίδιο) ...
+// ---------------------------------------------------------
+
 function checkTurn(isMyTurn, gameMode) {
     if (isMyTurn) {
         $('#my-hand').removeClass('disabled');
