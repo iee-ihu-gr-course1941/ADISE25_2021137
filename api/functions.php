@@ -2,9 +2,9 @@
 // api/functions.php
 
 // 1. Συνάρτηση που φτιάχνει το παιχνίδι στη βάση
-function create_game($mysqli, $mode = 'pve') {
+function create_game($mysqli, $player_id, $mode = 'pve') {
     // Εισάγουμε και το game_mode στη βάση. Ξεκινάει πάντα ο παίκτης 1.
-    $sql = "INSERT INTO games (player_1_id, game_status, current_turn_id, game_mode) VALUES (1, 'active', 1, '$mode')";
+    $sql = "INSERT INTO games (player_1_id, game_status, current_turn_id, game_mode) VALUES ($player_id, 'active', 1, '$mode')";
     
     if ($mysqli->query($sql)) {
         return $mysqli->insert_id; 

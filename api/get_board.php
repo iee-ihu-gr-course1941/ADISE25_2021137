@@ -60,7 +60,7 @@ if ($game_info['game_status'] === 'waiting') {
 }
 
 // ---------------------------------------------------------
-// ΣΥΝΑΡΤΗΣΗ ΠΟΝΤΩΝ (Βοηθητική)
+// ΣΥΝΑΡΤΗΣΗ ΠΟΝΤΩΝ (Βοηθητική) - Κανόνες Ξερής
 // ---------------------------------------------------------
 function calculate_points($mysqli, $gid, $pos) {
     $res = $mysqli->query("SELECT card_code FROM game_cards WHERE game_id=$gid AND card_position='$pos'");
@@ -70,10 +70,10 @@ function calculate_points($mysqli, $gid, $pos) {
     while($row = $res->fetch_assoc()) {
         $card_count++;
         $code = $row['card_code']; // π.χ. C10, H1
-        $rank = substr($code, 1);  // π.χ. 10, 1
+        $rank = intval(substr($code, 1));  // π.χ. 10, 1
         
         // 1. Άσσοι (1 πόντος)
-        if ($rank === '1') {
+        if ($rank === 1) {
             $pts += 1;
         }
         // 2. Δύο Σπαθί (C2) (1 πόντος) - Καλό Δύο
@@ -84,10 +84,6 @@ function calculate_points($mysqli, $gid, $pos) {
         elseif ($code === 'D10') {
             $pts += 2;
         }
-        
-        // Οι Φιγούρες (J, Q, K) παίρνουν 1 πόντο στην "Αμερικάνικη" Ξερή ή στην Diloti,
-        // αλλά στην κλασική ελληνική Ξερή συνήθως μετράμε μόνο τα παραπάνω + την πλειοψηφία καρτών.
-        // Εδώ κρατάμε τον κώδικα απλό όπως ήταν.
     }
     
     return ['points' => $pts, 'count' => $card_count];
@@ -111,7 +107,6 @@ if ($game_info['game_status'] === 'finished') {
     $opp_final_score = $opp_data['points'] + $opp_bonus;
     
     // Μπόνους για περισσότερα χαρτιά (3 πόντοι)
-    // Όποιος έχει πάνω από 26 χαρτιά (ή απλά περισσότερα από τον άλλον)
     if ($my_data['count'] > $opp_data['count']) {
         $my_final_score += 3;
     } elseif ($opp_data['count'] > $my_data['count']) {
