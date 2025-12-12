@@ -13,16 +13,16 @@ if (!isset($_SESSION['user_id'])) {
 }
 $my_id = $_SESSION['user_id']; 
 
-// 1. Ψάχνουμε για παιχνίδι που είναι 'waiting' και 'pvp'
+// 1. Ψάχνουμε για παιχνίδι που είναι 'waiting' (PvP matchmaking)
 // Χρησιμοποιούμε FOR UPDATE για να κλειδώσουμε τη γραμμή (αποφυγή race condition)
-$sql_search = "SELECT id, player_1_id FROM games WHERE game_status = 'waiting' AND game_mode = 'pvp' LIMIT 1 FOR UPDATE";
+$sql_search = "SELECT id, player1_id FROM games WHERE status = 'waiting' AND player2_id IS NULL LIMIT 1 FOR UPDATE";
 $result = $mysqli->query($sql_search);
 
 if ($result->num_rows > 0) {
     // --- ΣΕΝΑΡΙΟ Α: ΒΡΕΘΗΚΕ ΠΑΙΧΝΙΔΙ ---
     $row = $result->fetch_assoc();
     $game_id = $row['id'];
-    $p1_id = $row['player_1_id'];
+    $p1_id = $row['player1_id'];
 
     // 1. Εάν είμαι ο P1 (ο δημιουργός), απλά επιβεβαιώνω ότι περιμένω
     if ($p1_id == $my_id) {
@@ -40,11 +40,11 @@ if ($result->num_rows > 0) {
     }
 
     // 2. Είμαι P2: Κάνω join
-    // Ενημερώνουμε το player_2_id και το status σε 'active' ΜΟΝΟ αν το player_2_id είναι NULL
+    // Ενημερώνουμε το player2_id και το status σε 'active' ΜΟΝΟ αν το player2_id είναι NULL
     $sql_update = "UPDATE games 
-                   SET game_status = 'active', 
-                       player_2_id = $my_id 
-                   WHERE id = $game_id AND player_2_id IS NULL";
+                   SET status = 'active', 
+                       player2_id = $my_id 
+                   WHERE id = $game_id AND player2_id IS NULL";
 
     if ($mysqli->query($sql_update) && $mysqli->affected_rows > 0) {
         // Επιτυχία Join
@@ -68,8 +68,8 @@ if ($result->num_rows > 0) {
 } else {
     // --- ΣΕΝΑΡΙΟ Β: ΔΕΝ ΒΡΕΘΗΚΕ (ΔΗΜΙΟΥΡΓΙΑ ΝΕΟΥ) ---
     
-    $sql_new = "INSERT INTO games (player_1_id, game_status, current_turn_id, game_mode) 
-                VALUES ($my_id, 'waiting', 1, 'pvp')";
+    $sql_new = "INSERT INTO games (player1_id, status, current_player) 
+                VALUES ($my_id, 'waiting', 1)";
     
     if ($mysqli->query($sql_new)) {
         $game_id = $mysqli->insert_id;

@@ -3,22 +3,36 @@
 require_once '../db.php';
 require_once 'functions.php';  
 
-// Διαβάζουμε το mode που έστειλε η JavaScript (αν δεν έστειλε, default 'pve')
-$mode = isset($_POST['mode']) ? $_POST['mode'] : 'pve';
-$my_id = $_SESSION['user_id']; // Παίρνουμε το ID από το Login
+header('Content-Type: application/json');
 
-// 1. Φτιάξε νέο παιχνίδι με το συγκεκριμένο Mode και το σωστό player ID
-$game_id = create_game($mysqli, $my_id, $mode);
+if (!isset($_SESSION['user_id'])) {
+    echo json_encode(['error' => 'Not logged in']);
+    exit;
+}
+
+$my_id = $_SESSION['user_id'];
+$mode = isset($_POST['mode']) ? $_POST['mode'] : 'pve';
+
+// 1. Δημιουργία παιχνιδιού (με bot ως player2)
+$sql = "INSERT INTO games (player1_id, player2_id, status, current_player) 
+        VALUES ($my_id, NULL, 'active', 1)";
+
+if (!$mysqli->query($sql)) {
+    echo json_encode(['error' => 'Database error: ' . $mysqli->error]);
+    exit;
+}
+
+$game_id = $mysqli->insert_id;
+
 // 2. Φτιάξε τράπουλα
-$my_deck = generate_shuffled_deck();
+$deck = generate_shuffled_deck();
 
 // 3. Αποθήκευσε
-save_deck_to_db($mysqli, $game_id, $my_deck);
+save_deck_to_db($mysqli, $game_id, $deck);
 
 // 4. Μοίρασε
 deal_initial_cards($mysqli, $game_id);
 
-header('Content-Type: application/json');
 echo json_encode([
     "status" => "success", 
     "game_id" => $game_id, 

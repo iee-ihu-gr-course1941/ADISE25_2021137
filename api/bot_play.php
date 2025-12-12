@@ -1,103 +1,134 @@
 <?php
-// api/bot_play.php
+// api/bot_play.php - JSON Version
 require_once '../db.php';
+require_once 'functions.php';
 
 header('Content-Type: application/json');
 
-// 1. Βρίσκουμε το παιχνίδι (Bot = Player 2)
-$sql_game = "SELECT id FROM games WHERE game_status='active' AND current_turn_id=2 LIMIT 1";
+// Βρίσκουμε το παιχνίδι όπου είναι η σειρά του Bot (Player 2)
+if (isset($_GET['game_id'])) {
+    $game_id = intval($_GET['game_id']);
+    $sql_game = "SELECT * FROM games WHERE id = $game_id AND status='active' AND current_player=2 AND player2_id IS NULL";
+} else {
+    $sql_game = "SELECT * FROM games WHERE status='active' AND current_player=2 AND player2_id IS NULL LIMIT 1";
+}
 $res_game = $mysqli->query($sql_game);
 
-if ($res_game->num_rows == 0) {
+if (!$res_game || $res_game->num_rows == 0) {
     echo json_encode(['status' => 'waiting', 'message' => 'Δεν είναι η σειρά του Bot']);
     exit;
 }
 
-$game_id = $res_game->fetch_assoc()['id'];
+$game = $res_game->fetch_assoc();
+$game_id = $game['id'];
 
-// 2. Ανάλυση Τραπεζιού
-$result_table = $mysqli->query("SELECT * FROM game_cards WHERE game_id = $game_id AND card_position = 'table' ORDER BY card_order DESC");
-$table_cards = [];
-while($row = $result_table->fetch_assoc()) { $table_cards[] = $row; }
-
-$last_table_card = (count($table_cards) > 0) ? $table_cards[0] : null;
-$last_rank = ($last_table_card) ? intval(substr($last_table_card['card_code'], 1)) : 0;
-
-// 3. Bot Hand
-$res_hand = $mysqli->query("SELECT * FROM game_cards WHERE game_id=$game_id AND card_position='hand_p2'");
-$bot_hand = [];
-while($row = $res_hand->fetch_assoc()) { $bot_hand[] = $row; }
+// Φέρνουμε τα δεδομένα από JSON
+$bot_hand = json_decode($game['player2_hand'], true) ?: [];
+$table_cards = json_decode($game['table_cards'], true) ?: [];
+$bot_collected = json_decode($game['player2_collected'], true) ?: [];
 
 if (empty($bot_hand)) {
-    // Αν δεν έχει χαρτιά, ίσως πρέπει να γίνει redeal ή να τελειώσει
-    require_once 'functions.php';
+    // Αν δεν έχει χαρτιά, έλεγχος για μοίρασμα
     check_and_redeal($mysqli, $game_id);
     echo json_encode(['status' => 'no_cards']);
     exit;
 }
 
-// 4. Στρατηγική Επιλογής
-$card_to_play = null;
+// Στρατηγική Επιλογής
+$card_index = null;
+$last_card = count($table_cards) > 0 ? $table_cards[count($table_cards) - 1] : null;
+$last_rank = $last_card ? intval(substr($last_card, 1)) : 0;
 
-// Α. Μάζεμα
-foreach ($bot_hand as $card) {
-    $rank = intval(substr($card['card_code'], 1));
-    if ($last_table_card && $rank === $last_rank) {
-        $card_to_play = $card;
-        break; 
+// Α. Προσπάθεια για μάζεμα (matching rank)
+foreach ($bot_hand as $idx => $card) {
+    $rank = intval(substr($card, 1));
+    if ($last_card && $rank === $last_rank) {
+        $card_index = $idx;
+        break;
     }
 }
-// Β. Βαλές
-if (!$card_to_play && count($table_cards) > 0) {
-    foreach ($bot_hand as $card) {
-        if (intval(substr($card['card_code'], 1)) === 11) {
-            $card_to_play = $card;
+
+// Β. Βαλές αν υπάρχουν κάρτες στο τραπέζι
+if ($card_index === null && count($table_cards) > 0) {
+    foreach ($bot_hand as $idx => $card) {
+        if (intval(substr($card, 1)) === 11) {
+            $card_index = $idx;
             break;
         }
     }
 }
-// Γ. Τυχαίο / Smart Discard
-if (!$card_to_play) {
-    $card_to_play = $bot_hand[array_rand($bot_hand)];
+
+// Γ. Τυχαίο χαρτί
+if ($card_index === null) {
+    $card_index = array_rand($bot_hand);
 }
 
-// 5. Εκτέλεση Κίνησης
-$card_id = $card_to_play['id'];
-$played_rank = intval(substr($card_to_play['card_code'], 1));
+$played_card = $bot_hand[$card_index];
+$played_rank = intval(substr($played_card, 1));
+
+// Αφαίρεση χαρτιού από το χέρι
+array_splice($bot_hand, $card_index, 1);
+
+// Λογική παιχνιδιού
 $action = 'drop';
 $is_xeri = false;
 $xeri_points = 0;
 
-if ($played_rank === 11) { 
+if ($played_rank === 11) {
     if (count($table_cards) > 0) {
         $action = 'collect';
-        if (count($table_cards) === 1 && $last_rank === 11) { $is_xeri = true; $xeri_points = 20; }
+        if (count($table_cards) === 1 && $last_rank === 11) {
+            $is_xeri = true;
+            $xeri_points = 20;
+        }
     }
-} elseif ($last_table_card && $played_rank === $last_rank) { 
+} elseif ($last_card && $played_rank === $last_rank) {
     $action = 'collect';
-    if (count($table_cards) === 1) { $is_xeri = true; $xeri_points = 10; }
-}
-
-if ($action === 'collect') {
-    $mysqli->query("UPDATE game_cards SET card_position = 'score_p2' WHERE game_id = $game_id AND card_position = 'table'");
-    $mysqli->query("UPDATE game_cards SET card_position = 'score_p2' WHERE id = $card_id");
-    if ($is_xeri) {
-        $mysqli->query("UPDATE games SET p2_bonus_points = p2_bonus_points + $xeri_points WHERE id = $game_id");
+    if (count($table_cards) === 1) {
+        $is_xeri = true;
+        $xeri_points = 10;
     }
-    // ΝΕΟ: Το Bot μάζεψε τελευταίο
-    $mysqli->query("UPDATE games SET last_collector_id = 2 WHERE id = $game_id");
-} else {
-    $new_order = 1;
-    if ($last_table_card) $new_order = $last_table_card['card_order'] + 1;
-    $mysqli->query("UPDATE game_cards SET card_position = 'table', card_order = $new_order WHERE id = $card_id");
 }
 
-// 6. Αλλαγή Σειράς -> P1
-$mysqli->query("UPDATE games SET current_turn_id = 1 WHERE id = $game_id");
+// Εκτέλεση ενέργειας
+if ($action === 'collect') {
+    $bot_collected[] = $played_card;
+    $bot_collected = array_merge($bot_collected, $table_cards);
+    $table_cards = [];
+    $last_to_collect = 2;
+} else {
+    $table_cards[] = $played_card;
+    $last_to_collect = $game['last_to_collect'];
+}
 
-// 7. ΕΛΕΓΧΟΣ ΓΙΑ ΤΕΛΟΣ / ΜΟΙΡΑΣΜΑ (ΠΟΛΥ ΣΗΜΑΝΤΙΚΟ!)
-require_once 'functions.php';
+// Υπολογισμός νέου σκορ
+$new_score = intval($game['player2_score']) + $xeri_points;
+
+// Αλλαγή σειράς
+$next_turn = 1;
+
+// Ενημέρωση βάσης
+$update_sql = "UPDATE games SET 
+    player2_hand = '" . $mysqli->real_escape_string(json_encode($bot_hand)) . "',
+    player2_collected = '" . $mysqli->real_escape_string(json_encode($bot_collected)) . "',
+    table_cards = '" . $mysqli->real_escape_string(json_encode($table_cards)) . "',
+    current_player = $next_turn,
+    last_to_collect = " . ($last_to_collect ?: "NULL") . ",
+    player2_score = $new_score
+    WHERE id = $game_id";
+
+if (!$mysqli->query($update_sql)) {
+    echo json_encode(['error' => 'Database error: ' . $mysqli->error]);
+    exit;
+}
+
+// Έλεγχος για μοίρασμα ή τέλος
 check_and_redeal($mysqli, $game_id);
 
-echo json_encode(['status' => 'played', 'action' => $action]);
+echo json_encode([
+    'status' => 'success',
+    'action' => $action,
+    'is_xeri' => $is_xeri,
+    'message' => 'Bot played'
+]);
 ?>

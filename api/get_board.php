@@ -1,209 +1,132 @@
-<?php
+﻿<?php
 // api/get_board.php
 require_once '../db.php';
 header('Content-Type: application/json');
 
-// Έλεγχος αν υπάρχει το game_id
 if (!isset($_GET['game_id'])) { 
-    echo json_encode(['error' => 'No ID']); 
+    echo json_encode(['error' => 'No game_id provided']); 
     exit; 
 }
 $game_id = intval($_GET['game_id']);
-
-// Βρίσκουμε ποιος είμαι (από το session ή default 1)
 $my_side = isset($_GET['player_side']) ? intval($_GET['player_side']) : 1;
 $opp_side = ($my_side == 1) ? 2 : 1;
 
-// Ορίζουμε τα πεδία της βάσης για τα χέρια και τις στοίβες
-$my_hand_col = "hand_p" . $my_side;
-$opp_hand_col = "hand_p" . $opp_side;
-$my_pile_col = "score_p" . $my_side;
-$opp_pile_col = "score_p" . $opp_side;
-
-
-// ---------------------------------------------------------
-// 1. Φέρνουμε πληροφορίες παιχνιδιού ΚΑΙ ΟΝΟΜΑΤΑ παικτών
-// ---------------------------------------------------------
-// Κάνουμε JOIN με τον πίνακα users για να πάρουμε τα ονόματα από τα IDs
+// Φέρνουμε πληροφορίες παιχνιδιού με ονόματα παικτών
 $sql_game = "
     SELECT g.*, 
            u1.username as p1_name, 
            u2.username as p2_name 
     FROM games g
-    LEFT JOIN users u1 ON g.player_1_id = u1.id
-    LEFT JOIN users u2 ON g.player_2_id = u2.id
+    LEFT JOIN users u1 ON g.player1_id = u1.id
+    LEFT JOIN users u2 ON g.player2_id = u2.id
     WHERE g.id = $game_id
 ";
 
 $res = $mysqli->query($sql_game);
-if (!$res) { echo json_encode(['error' => 'DB Error']); exit; }
-$game_info = $res->fetch_assoc();
+if (!$res || !($game_info = $res->fetch_assoc())) { 
+    echo json_encode(['error' => 'Game not found']); 
+    exit; 
+}
 
-if (!$game_info) { echo json_encode(['error' => 'Game not found']); exit; }
-
-// --- ΚΑΘΟΡΙΣΜΟΣ ΟΝΟΜΑΤΩΝ ΓΙΑ ΤΟ UI ---
-$p1_name = $game_info['p1_name'] ? $game_info['p1_name'] : "Παίκτης 1";
-
-// Αν είναι PvE και δεν υπάρχει 2ος παίκτης στη βάση, τον λέμε "Υπολογιστής"
-// Αν είναι PvP και δεν έχει μπει ακόμα, θα είναι null (αλλά θα το χειριστεί το waiting status)
-$p2_name = ($game_info['game_mode'] === 'pve') ? "Υπολογιστής" : ($game_info['p2_name'] ? $game_info['p2_name'] : "Αντίπαλος");
-
-// Ποιο όνομα είναι δικό μου και ποιο του αντιπάλου;
+// Ονόματα παικτών
+$p1_name = $game_info['p1_name'] ?: "Παίκτης 1";
+$p2_name = $game_info['p2_name'] ?: "Αντίπαλος";
 $my_name_display = ($my_side == 1) ? $p1_name : $p2_name;
 $opp_name_display = ($my_side == 1) ? $p2_name : $p1_name;
 
-
-// --- ΕΛΕΓΧΟΣ STATUS (WAITING) ---
-if ($game_info['game_status'] === 'waiting') {
+// Έλεγχος αν περιμένουμε αντίπαλο
+if ($game_info['status'] === 'waiting') {
     echo json_encode(['status' => 'waiting_for_opponent']);
     exit;
 }
 
-// ---------------------------------------------------------
-// ΣΥΝΑΡΤΗΣΗ ΠΟΝΤΩΝ (Βοηθητική) - Κανόνες Ξερής
-// ---------------------------------------------------------
-function calculate_points($mysqli, $gid, $pos) {
-    $res = $mysqli->query("SELECT card_code FROM game_cards WHERE game_id=$gid AND card_position='$pos'");
-    $pts = 0;
-    $card_count = 0;
+// Έλεγχος αν το παιχνίδι τελείωσε
+if ($game_info['status'] === 'finished') {
+    $my_score = ($my_side == 1) ? $game_info['player1_score'] : $game_info['player2_score'];
+    $opp_score = ($opp_side == 1) ? $game_info['player1_score'] : $game_info['player2_score'];
     
-    while($row = $res->fetch_assoc()) {
-        $card_count++;
-        $code = $row['card_code']; // π.χ. C10, H1
-        $rank = intval(substr($code, 1));  // π.χ. 10, 1
-        
-        // 1. Άσσοι (1 πόντος)
-        if ($rank === 1) {
-            $pts += 1;
-        }
-        // 2. Δύο Σπαθί (C2) (1 πόντος) - Καλό Δύο
-        elseif ($code === 'C2') {
-            $pts += 1;
-        }
-        // 3. Δέκα Καρό (D10) (2 πόντοι) - Καλό Δέκα
-        elseif ($code === 'D10') {
-            $pts += 2;
-        }
-    }
+    $my_collected = json_decode(($my_side == 1) ? $game_info['player1_collected'] : $game_info['player2_collected'], true) ?: [];
+    $opp_collected = json_decode(($opp_side == 1) ? $game_info['player1_collected'] : $game_info['player2_collected'], true) ?: [];
     
-    return ['points' => $pts, 'count' => $card_count];
-}
-
-
-// ---------------------------------------------------------
-// 2. ΕΛΕΓΧΟΣ ΓΙΑ ΤΕΛΟΣ ΠΑΙΧΝΙΔΙΟΥ (GAME OVER)
-// ---------------------------------------------------------
-if ($game_info['game_status'] === 'finished') {
-    
-    // Υπολογισμός πόντων από κάρτες
-    $my_data = calculate_points($mysqli, $game_id, $my_pile_col);
-    $opp_data = calculate_points($mysqli, $game_id, $opp_pile_col);
-    
-    // Πόντοι από Ξερές (Bonus)
-    $my_bonus = ($my_side == 1) ? intval($game_info['p1_bonus_points']) : intval($game_info['p2_bonus_points']);
-    $opp_bonus = ($opp_side == 1) ? intval($game_info['p1_bonus_points']) : intval($game_info['p2_bonus_points']);
-    
-    $my_final_score = $my_data['points'] + $my_bonus;
-    $opp_final_score = $opp_data['points'] + $opp_bonus;
-    
-    // Μπόνους για περισσότερα χαρτιά (3 πόντοι)
-    if ($my_data['count'] > $opp_data['count']) {
-        $my_final_score += 3;
-    } elseif ($opp_data['count'] > $my_data['count']) {
-        $opp_final_score += 3;
-    }
-    
-    // Καθορισμός Νικητή & Μηνύματος
+    // Καθορισμός νικητή
     $winner = 'draw';
-    $winner_name = "Κανείς";
+    $final_message = "Ισοπαλία!";
     
-    if ($my_final_score > $opp_final_score) {
+    if ($my_score > $opp_score) {
         $winner = 'me';
-        $winner_name = $my_name_display; // Το δικό μου όνομα
-    } elseif ($opp_final_score > $my_final_score) {
+        $final_message = "Νίκησες!";
+    } elseif ($opp_score > $my_score) {
         $winner = 'opponent';
-        $winner_name = $opp_name_display; // Το όνομα του αντιπάλου
-    }
-    
-    // Δημιουργία του τελικού μηνύματος
-    if ($winner === 'draw') {
-        $final_message = 'ΙΣΟΠΑΛΙΑ!';
-    } else {
-        // Μετατροπή σε κεφαλαία για έμφαση
-        $final_message = "ΝΙΚΗΣΕ Ο/Η " . mb_strtoupper($winner_name, 'UTF-8') . "!";
+        $final_message = "Έχασες!";
     }
     
     echo json_encode([
         'status' => 'finished',
         'winner' => $winner,
-        'final_message' => $final_message, // Αυτό θα δείξει το UI
-        'my_score' => $my_final_score,
-        'opp_score' => $opp_final_score,
-        'my_cards' => $my_data['count'],
-        'opp_cards' => $opp_data['count']
+        'final_message' => $final_message,
+        'my_score' => $my_score,
+        'opp_score' => $opp_score,
+        'my_cards' => count($my_collected),
+        'opp_cards' => count($opp_collected)
     ]);
     exit;
 }
 
+// Παιχνίδι σε εξέλιξη - φέρνουμε τα δεδομένα
+$deck = json_decode($game_info['deck'], true) ?: [];
+$my_hand = json_decode(($my_side == 1) ? $game_info['player1_hand'] : $game_info['player2_hand'], true) ?: [];
+$opp_hand = json_decode(($opp_side == 1) ? $game_info['player1_hand'] : $game_info['player2_hand'], true) ?: [];
+$table_cards = json_decode($game_info['table_cards'], true) ?: [];
+$my_collected = json_decode(($my_side == 1) ? $game_info['player1_collected'] : $game_info['player2_collected'], true) ?: [];
+$opp_collected = json_decode(($opp_side == 1) ? $game_info['player1_collected'] : $game_info['player2_collected'], true) ?: [];
 
-// ---------------------------------------------------------
-// 3. ΕΝΕΡΓΟ ΠΑΙΧΝΙΔΙ (ACTIVE STATE)
-// ---------------------------------------------------------
-
-// Α. Κάρτες στο Τραπέζι
-$res_table = $mysqli->query("SELECT card_code FROM game_cards WHERE game_id = $game_id AND card_position = 'table' ORDER BY card_order ASC");
-$table_cards = [];
-while ($row = $res_table->fetch_assoc()) { 
-    $table_cards[] = $row['card_code']; 
+// Υπολογισμός πόντων από τις μαζεμένες κάρτες
+function calculate_score($cards) {
+    $score = 0;
+    foreach ($cards as $card) {
+        $rank = intval(substr($card, 1));
+        if ($rank === 1) $score += 1; // Άσσοι
+        elseif ($card === 'C2') $score += 1; // Καλό δύο
+        elseif ($card === 'D10') $score += 2; // Καλό δέκα
+    }
+    return $score;
 }
 
-// Β. Το Χέρι ΜΟΥ
-$res_hand = $mysqli->query("SELECT id, card_code FROM game_cards WHERE game_id = $game_id AND card_position = '$my_hand_col' ORDER BY card_order ASC");
-$my_cards = [];
-while ($row = $res_hand->fetch_assoc()) { 
-    $my_cards[] = ['id' => $row['id'], 'code' => $row['card_code']]; 
+// Υπολογισμός πόντων από κάρτες
+$my_card_score = calculate_score($my_collected);
+$opp_card_score = calculate_score($opp_collected);
+
+// Προσθήκη bonus πόντων από ξερές (αποθηκευμένοι στη βάση)
+$my_score = $my_card_score + intval($game_info[($my_side == 1) ? 'player1_score' : 'player2_score']);
+$opp_score = $opp_card_score + intval($game_info[($opp_side == 1) ? 'player1_score' : 'player2_score']);
+
+// Έλεγχος σειράς
+$is_my_turn = ($game_info['current_player'] == $my_side);
+
+// Καθορισμός game_mode (pve αν δεν υπάρχει player2_id, αλλιώς pvp)
+$game_mode = ($game_info['player2_id'] === null) ? 'pve' : 'pvp';
+
+// Μετατροπή χαρτιών σε format με id για το frontend
+$my_hand_formatted = [];
+foreach ($my_hand as $idx => $card) {
+    $my_hand_formatted[] = ['id' => $idx, 'code' => $card];
 }
 
-// Γ. Χέρι Αντιπάλου (Μόνο αριθμός)
-$opponent_count = $mysqli->query("SELECT COUNT(*) as c FROM game_cards WHERE game_id = $game_id AND card_position = '$opp_hand_col'")->fetch_assoc()['c'];
-
-// Δ. Σκορ & Στοίβες (Live Score)
-$my_bonus = ($my_side == 1) ? $game_info['p1_bonus_points'] : $game_info['p2_bonus_points'];
-$opp_bonus = ($opp_side == 1) ? $game_info['p1_bonus_points'] : $game_info['p2_bonus_points'];
-
-$my_data = calculate_points($mysqli, $game_id, $my_pile_col);
-$opp_data = calculate_points($mysqli, $game_id, $opp_pile_col);
-
-$my_score = intval($my_bonus) + $my_data['points'];
-$opp_score = intval($opp_bonus) + $opp_data['points'];
-
-$my_pile_count = $my_data['count'];
-$opp_pile_count = $opp_data['count'];
-
-// Ε. Σειρά & Τράπουλα
-$is_my_turn = ($game_info['current_turn_id'] == $my_side);
-$deck_count = $mysqli->query("SELECT COUNT(*) as c FROM game_cards WHERE game_id=$game_id AND card_position='deck'")->fetch_assoc()['c'];
-
-
-// ---------------------------------------------------------
-// 4. ΤΕΛΙΚΗ ΑΠΑΝΤΗΣΗ JSON
-// ---------------------------------------------------------
 echo json_encode([
     'status' => 'active',
     'table' => $table_cards,
-    'my_hand' => $my_cards,
-    'opponent_cards_count' => $opponent_count,
-    'deck_count' => $deck_count,
+    'my_hand' => $my_hand_formatted,
+    'opponent_cards_count' => count($opp_hand),
+    'deck_count' => count($deck),
     
     'my_score' => $my_score,
-    'my_pile_count' => $my_pile_count,
+    'my_pile_count' => count($my_collected),
     'opp_score' => $opp_score,
-    'opp_pile_count' => $opp_pile_count,
+    'opp_pile_count' => count($opp_collected),
     
     'is_my_turn' => $is_my_turn,
-    'game_mode' => $game_info['game_mode'],
+    'game_mode' => $game_mode,
     
-    // Τα ονόματα για το UI
     'my_name' => $my_name_display,
     'opp_name' => $opp_name_display
 ]);

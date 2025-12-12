@@ -538,12 +538,16 @@ function triggerBotPlay() {
         $.ajax({
             url: 'api/bot_play.php',
             type: 'GET',
+            data: {
+                game_id: currentGameId
+            },
             success: function(response) {
                 console.log("Το Bot έπαιξε:", response);
                 botThinking = false;
                 fetchBoardData(); 
             },
-            error: function() {
+            error: function(xhr, status, error) {
+                console.error("Bot play error:", error);
                 botThinking = false;
                 setTimeout(triggerBotPlay, 5000); 
             }
@@ -565,7 +569,8 @@ function playCard(cardId) {
         type: 'POST',
         data: { 
             card_id: cardId,
-            player_side: myPlayerSide 
+            player_side: myPlayerSide,
+            game_id: currentGameId
         },
         dataType: 'json',
         success: function(response) {

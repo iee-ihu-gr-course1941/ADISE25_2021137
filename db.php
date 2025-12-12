@@ -1,18 +1,25 @@
 <?php
-session_Start();
+// Ορισμός φακέλου για sessions
+ini_set('session.save_path', realpath(__DIR__ . '/sessions'));
 
-$host = 'localhost';
-$db   = 'xeri_db';
-$user = 'root';
-$pass = ''; // Αν έχεις βάλει κωδικό στο MySQL, βάλτον εδώ. Συνήθως στο XAMPP είναι κενό.
-$charset = 'utf8mb4';
-
-$mysqli = new mysqli($host, $user, $pass, $db);
-
-if ($mysqli->connect_error) {
-    die("Αποτυχία σύνδεσης: " . $mysqli->connect_error);
+// Έλεγχος: Ξεκινάμε session ΜΟΝΟ αν δεν έχει ξεκινήσει ήδη
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
 }
 
-// Για να διαβάζουμε σωστά ελληνικά αν χρειαστεί
-$mysqli->set_charset($charset);
-?>
+$servername = "localhost";
+$username = "iee2021137";
+$password = "pantelis2003";
+$dbname = "iee2021137";
+$socket = "/home/student/iee/2021/iee2021137/mysql/run/mysql.sock";
+
+// Δημιουργία σύνδεσης
+$mysqli = new mysqli($servername, $username, $password, $dbname, null, $socket);
+
+// Έλεγχος σύνδεσης
+if ($mysqli->connect_error) {
+    die("Connection failed: " . $mysqli->connect_error);
+}
+
+// Ρύθμιση ελληνικών
+$mysqli->set_charset("utf8mb4");

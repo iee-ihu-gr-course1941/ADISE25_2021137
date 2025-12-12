@@ -16,32 +16,28 @@ $quitter_side = intval($_POST['player_side']); // 1 or 2
 $winner_side = ($quitter_side == 1) ? 2 : 1;
 $loser_side = $quitter_side;
 
-// 1. Φέρνουμε τα IDs των παικτών και το game_mode
-$sql_game_info = "SELECT id, player_1_id, player_2_id, game_mode, stats_updated FROM games WHERE id = $game_id";
+// 1. Φέρνουμε τα IDs των παικτών
+$sql_game_info = "SELECT id, player1_id, player2_id FROM games WHERE id = $game_id";
 $game_info = $mysqli->query($sql_game_info)->fetch_assoc();
 
-// 2. Ελέγχουμε αν είναι PvP και αν δεν έχει ήδη ενημερωθεί.
-if ($game_info && $game_info['game_mode'] === 'pvp' && $game_info['stats_updated'] == 0) {
+// 2. Ενημέρωση στατιστικών (μόνο αν υπάρχουν και οι 2 παίκτες)
+if ($game_info && $game_info['player2_id']) {
     
-    // Δίνουμε απώλεια στον quitter και νίκη στον αντίπαλο (μόνο αν ο αντίπαλος είναι human player)
-    $winner_user_id = ($winner_side == 1) ? $game_info['player_1_id'] : $game_info['player_2_id'];
-    $loser_user_id = ($loser_side == 1) ? $game_info['player_1_id'] : $game_info['player_2_id'];
+    $winner_user_id = ($winner_side == 1) ? $game_info['player1_id'] : $game_info['player2_id'];
+    $loser_user_id = ($loser_side == 1) ? $game_info['player1_id'] : $game_info['player2_id'];
 
-    if ($winner_user_id && $loser_user_id) { // Ελέγχουμε ότι και οι δύο είναι human users
+    if ($winner_user_id && $loser_user_id) {
         
         // Ενημέρωση Quitter (Loss)
-        $mysqli->query("UPDATE users SET losses = losses + 1 WHERE id = $loser_user_id");
+        $mysqli->query("UPDATE users SET games_lost = games_lost + 1, games_played = games_played + 1 WHERE id = $loser_user_id");
 
         // Ενημέρωση Winner (Win)
-        $mysqli->query("UPDATE users SET wins = wins + 1 WHERE id = $winner_user_id");
-
-        // Σημειώνουμε το παιχνίδι ως ενημερωμένο
-        $mysqli->query("UPDATE games SET stats_updated = 1 WHERE id = $game_id");
+        $mysqli->query("UPDATE users SET games_won = games_won + 1, games_played = games_played + 1 WHERE id = $winner_user_id");
     }
 }
 
-// 3. Τερματίζουμε το παιχνίδι. Ορίζουμε τον νικητή (από εγκατάλειψη) ως last_collector
-$mysqli->query("UPDATE games SET game_status = 'finished', last_collector_id = $winner_side WHERE id = $game_id");
+// 3. Τερματίζουμε το παιχνίδι. Ορίζουμε τον νικητή (από εγκατάλειψη) ως last_to_collect
+$mysqli->query("UPDATE games SET status = 'finished', last_to_collect = $winner_side WHERE id = $game_id");
 
 // 4. Καθάρισε το session του παιχνιδιού
 if (isset($_SESSION['game_id']) && $_SESSION['game_id'] == $game_id) {
