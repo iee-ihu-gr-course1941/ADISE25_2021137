@@ -143,6 +143,15 @@ h1 {
     min-height: 150px;
 }
 
+/* Τα χαρτιά στο τραπέζι στοιβάζονται με overlap */
+#table-area .card {
+    margin-left: -40px; /* Overlap 50% του πλάτους (80px/2) */
+}
+
+#table-area .card:first-child {
+    margin-left: 0; /* Το πρώτο χαρτί δεν έχει overlap */
+}
+
 .player-zone {
     display: flex;
     justify-content: center;
@@ -161,6 +170,7 @@ h1 {
     align-items: center;
     font-weight: bold;
     color: black;
+    flex-shrink: 0; /* ΔΕΝ επιτρέπεται να συμπιεστεί */
     
     /* Ένα αχνό περίγραμμα για να φαίνεται πού είναι η θέση */
     border: 2px dashed rgba(255,255,255,0.3); 
@@ -263,7 +273,7 @@ button:hover {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(20, 50, 35, 0.95);
+    background-color: #35654d; /* Ίδιο με το body */
     z-index: 2000;
     display: flex; 
     justify-content: center; /* Κεντράρει το menu-container */
@@ -488,8 +498,15 @@ button:hover {
     }
 
     #table-area {
-        margin: 5px 10px;
+        margin: 5px 5px;
         min-height: 100px;
+        max-height: 150px; /* Μικρότερο max-height για κινητά */
+        max-width: calc(100% - 70px); /* Αφήνει χώρο για το draw-pile σε κινητά */
+    }
+    
+    #middle-zone {
+        gap: 10px; /* Μικρότερο gap για κινητά */
+        padding: 0 5px;
     }
 
     .score-pile {

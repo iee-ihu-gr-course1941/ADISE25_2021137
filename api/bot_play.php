@@ -1,7 +1,7 @@
 <?php
 // api/bot_play.php - JSON Version
-require_once '../db.php';
-require_once 'functions.php';
+require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/functions.php';
 
 header('Content-Type: application/json');
 
@@ -129,6 +129,7 @@ echo json_encode([
     'status' => 'success',
     'action' => $action,
     'is_xeri' => $is_xeri,
-    'message' => 'Bot played'
+    'message' => 'Bot played',
+    'played_card' => $played_card  // Προσθέτουμε το χαρτί που έπαιξε το bot
 ]);
 ?>

@@ -357,14 +357,33 @@ function fetchBoardData() {
                 $('#btn-quit-game').hide(); 
 
                 // Μήνυμα Νίκης/Ήττας/Ισοπαλίας
-                $('#go-title').text(data.final_message); 
-                
-                if (data.winner === 'me') {
-                    $('#go-title').css('color', '#32cd32'); 
-                } else if (data.winner === 'opponent') {
-                    $('#go-title').css('color', '#ff4d4d'); 
+                // Εξασφαλίζουμε ότι το μήνυμα ταιριάζει με το flag 'winner' (ο νικητής βλέπει "Νίκησες")
+                var extra = '';
+                if (typeof data.final_message === 'string') {
+                    var lm = data.final_message.toLowerCase();
+                    var idx = -1;
+                    if (lm.indexOf('αποσυνδ') !== -1) idx = lm.indexOf('αποσυνδ');
+                    else if (lm.indexOf('εγκατ') !== -1) idx = lm.indexOf('εγκατ');
+                    if (idx !== -1) {
+                        extra = ' ' + data.final_message.substring(idx);
+                    }
+                }
+
+                // Normalize winner values (be defensive)
+                var winnerFlag = String(data.winner || '').toLowerCase();
+                var iAmWinner = (winnerFlag === 'me' || winnerFlag === '1' || winnerFlag === 'true');
+                var oppIsWinner = (winnerFlag === 'opponent' || winnerFlag === '2' || winnerFlag === 'false');
+
+                if (iAmWinner) {
+                    $('#go-title').text('Νίκησες!' + extra);
+                    $('#go-title').css('color', '#32cd32');
+                } else if (oppIsWinner) {
+                    $('#go-title').text('Έχασες!' + extra);
+                    $('#go-title').css('color', '#ff4d4d');
                 } else {
-                    $('#go-title').css('color', 'gold'); 
+                    // draw or unknown: use provided message
+                    $('#go-title').text(data.final_message);
+                    $('#go-title').css('color', 'gold');
                 }
 
                 // Τελικά Σκορ και Αριθμός Καρτών
@@ -437,10 +456,11 @@ function renderMyHand(cards) {
 
     $handDiv.empty();
 
-    cards.forEach(function(cardObj) {
-        var html = '<div class="card my-card" data-id="' + cardObj.id + '">' +
-                        '<img src="img/cards/' + cardObj.code + '.png">' +
-                   '</div>';
+    cards.forEach(function(cardObj, i) { 
+        // Βάλε το 'i' στο data-id αντί για το cardObj.id
+        var html = '<div class="card my-card" data-id="' + i + '">' +
+                '<img src="img/cards/' + cardObj.code + '.png">' +
+                '</div>';
         $handDiv.append(html);
     });
 

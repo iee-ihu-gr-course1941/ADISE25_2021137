@@ -1,7 +1,7 @@
 <?php
 // api/find_match.php
-require_once '../db.php';
-require_once 'functions.php';
+require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/functions.php';
 
 header('Content-Type: application/json');
 header("Cache-Control: no-cache, no-store, must-revalidate");
@@ -43,7 +43,7 @@ if ($result->num_rows > 0) {
     // Ενημερώνουμε το player2_id και το status σε 'active' ΜΟΝΟ αν το player2_id είναι NULL
     $sql_update = "UPDATE games 
                    SET status = 'active', 
-                       player2_id = $my_id 
+                       player2_id = $my_id
                    WHERE id = $game_id AND player2_id IS NULL";
 
     if ($mysqli->query($sql_update) && $mysqli->affected_rows > 0) {

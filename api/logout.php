@@ -1,6 +1,6 @@
 <?php
 // api/logout.php
-require_once '../db.php'; // Εξασφαλίζει ότι session_start() έχει κληθεί
+require_once __DIR__ . '/../db.php'; // Εξασφαλίζει ότι session_start() έχει κληθεί
 
 header('Content-Type: application/json');
 

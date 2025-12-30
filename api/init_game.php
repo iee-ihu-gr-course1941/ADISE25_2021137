@@ -1,7 +1,7 @@
 <?php
 // api/init_game.php
-require_once '../db.php';
-require_once 'functions.php';  
+require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/functions.php';  
 
 header('Content-Type: application/json');
 

@@ -1,7 +1,7 @@
 <?php
 // api/play_card.php - JSON Version
-require_once '../db.php';
-require_once 'functions.php';
+require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/functions.php';
 
 header('Content-Type: application/json');
 
@@ -84,8 +84,11 @@ elseif ($last_card && $played_rank === $last_rank) {
     // ΞΕΡΗ: Αν υπήρχε ΑΚΡΙΒΩΣ 1 κάρτα κάτω
     if (count($table_cards) === 1) {
         $is_xeri = true;
+        
+        // ΝΕΟΣ ΚΑΝΟΝΑΣ: Ξερή δίνει πάντα 10 πόντους (ανεξάρτητα από το φύλλο)
+        // Τα πόντα των φύλλων θα μετρηθούν ξεχωριστά στο τέλος
         $xeri_points = 10;
-        $message = "🔥 ΞΕΡΗ! 🔥 (+10)";
+        $message = "🔥 ΞΕΡΗ! 🔥 (+10 πόντοι)";
     }
 }
 // ΠΕΡΙΠΤΩΣΗ 3: Απλό Ρίξιμο

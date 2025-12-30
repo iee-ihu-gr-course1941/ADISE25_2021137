@@ -60,6 +60,11 @@ function check_and_redeal($mysqli, $game_id) {
     $result = $mysqli->query("SELECT * FROM games WHERE id = $game_id");
     $game = $result->fetch_assoc();
     
+    // Αν το παιχνίδι έχει ήδη τελειώσει, μην κάνεις τίποτα (αποφυγή διπλού υπολογισμού)
+    if ($game['status'] === 'finished') {
+        return 'finished';
+    }
+    
     $deck = json_decode($game['deck'], true) ?: [];
     $player1_hand = json_decode($game['player1_hand'], true) ?: [];
     $player2_hand = json_decode($game['player2_hand'], true) ?: [];
@@ -73,104 +78,75 @@ function check_and_redeal($mysqli, $game_id) {
     // Αν τελείωσε η τράπουλα, τέλος παιχνιδιού
     if (count($deck) == 0) {
         // Δίνουμε τα χαρτιά του τραπεζιού στον τελευταίο που μάζεψε
+        $player1_collected = json_decode($game['player1_collected'], true) ?: [];
+        $player2_collected = json_decode($game['player2_collected'], true) ?: [];
+        
         if ($game['last_to_collect']) {
             $last_collector = $game['last_to_collect'];
-            $collected_field = ($last_collector == 1) ? 'player1_collected' : 'player2_collected';
-            $collected = json_decode($game[$collected_field], true) ?: [];
-            $collected = array_merge($collected, $table_cards);
-            
-            // Υπολογισμός τελικών σκορ
-            $player1_collected = json_decode($game['player1_collected'], true) ?: [];
-            $player2_collected = json_decode($game['player2_collected'], true) ?: [];
-            
             if ($last_collector == 1) {
-                $player1_collected = $collected;
+                $player1_collected = array_merge($player1_collected, $table_cards);
             } else {
-                $player2_collected = $collected;
+                $player2_collected = array_merge($player2_collected, $table_cards);
             }
-            
-            // Υπολογισμός πόντων από κάρτες
-            $player1_card_score = calculate_card_score($player1_collected);
-            $player2_card_score = calculate_card_score($player2_collected);
-            
-            // Bonus για περισσότερες κάρτες
-            if (count($player1_collected) > count($player2_collected)) {
-                $player1_card_score += 3;
-            } elseif (count($player2_collected) > count($player1_collected)) {
-                $player2_card_score += 3;
-            }
-            
-            // Προσθήκη των υπαρχόντων πόντων ξερής
-            $player1_final_score = $player1_card_score + intval($game['player1_score']);
-            $player2_final_score = $player2_card_score + intval($game['player2_score']);
-            
-            $mysqli->query("UPDATE games SET 
-                status = 'finished',
-                table_cards = '[]',
-                $collected_field = '" . json_encode($collected) . "',
-                player1_collected = '" . json_encode($player1_collected) . "',
-                player2_collected = '" . json_encode($player2_collected) . "',
-                player1_score = $player1_final_score,
-                player2_score = $player2_final_score
-                WHERE id = $game_id");
-            
-            // Ενημέρωση στατιστικών (μόνο αν υπάρχουν 2 παίκτες - PvP)
-            if ($game['player1_id'] && $game['player2_id']) {
-                if ($player1_final_score > $player2_final_score) {
-                    // Player 1 νικητής
-                    $mysqli->query("UPDATE users SET games_won = games_won + 1, games_played = games_played + 1 WHERE id = " . $game['player1_id']);
-                    $mysqli->query("UPDATE users SET games_lost = games_lost + 1, games_played = games_played + 1 WHERE id = " . $game['player2_id']);
-                } elseif ($player2_final_score > $player1_final_score) {
-                    // Player 2 νικητής
-                    $mysqli->query("UPDATE users SET games_won = games_won + 1, games_played = games_played + 1 WHERE id = " . $game['player2_id']);
-                    $mysqli->query("UPDATE users SET games_lost = games_lost + 1, games_played = games_played + 1 WHERE id = " . $game['player1_id']);
-                } else {
-                    // Ισοπαλία
-                    $mysqli->query("UPDATE users SET games_played = games_played + 1 WHERE id = " . $game['player1_id']);
-                    $mysqli->query("UPDATE users SET games_played = games_played + 1 WHERE id = " . $game['player2_id']);
-                }
-            }
+        }
+        
+        // Υπολογισμός πόντων από κάρτες
+        $player1_card_score = calculate_card_score($player1_collected);
+        $player2_card_score = calculate_card_score($player2_collected);
+        
+        // Bonus για περισσότερες κάρτες (+3)
+        // Αν είναι ισοπαλία σε πλήθος, δίνουμε το +3 στον τελευταίο που μάζεψε (ώστε το σύνολο των πόντων από φύλλα να είναι σταθερό).
+        $p1_count = count($player1_collected);
+        $p2_count = count($player2_collected);
+        if ($p1_count > $p2_count) {
+            $player1_card_score += 3;
+        } elseif ($p2_count > $p1_count) {
+            $player2_card_score += 3;
         } else {
-            // Αν δεν υπάρχει last_to_collect, απλά τελειώνουμε
-            $player1_collected = json_decode($game['player1_collected'], true) ?: [];
-            $player2_collected = json_decode($game['player2_collected'], true) ?: [];
-            
-            // Υπολογισμός πόντων από κάρτες
-            $player1_card_score = calculate_card_score($player1_collected);
-            $player2_card_score = calculate_card_score($player2_collected);
-            
-            // Bonus για περισσότερες κάρτες
-            if (count($player1_collected) > count($player2_collected)) {
-                $player1_card_score += 3;
-            } elseif (count($player2_collected) > count($player1_collected)) {
+            $last_collector = intval($game['last_to_collect']);
+            if ($last_collector === 2) {
                 $player2_card_score += 3;
+            } else {
+                // default σε player 1 αν δεν υπάρχει/είναι άκυρο
+                $player1_card_score += 3;
             }
-            
-            // Προσθήκη των υπαρχόντων πόντων ξερής
-            $player1_final_score = $player1_card_score + intval($game['player1_score']);
-            $player2_final_score = $player2_card_score + intval($game['player2_score']);
-            
-            $mysqli->query("UPDATE games SET 
-                status = 'finished',
-                player1_score = $player1_final_score,
-                player2_score = $player2_final_score
-                WHERE id = $game_id");
-            
-            // Ενημέρωση στατιστικών (μόνο αν υπάρχουν 2 παίκτες - PvP)
-            if ($game['player1_id'] && $game['player2_id']) {
-                if ($player1_final_score > $player2_final_score) {
-                    // Player 1 νικητής
-                    $mysqli->query("UPDATE users SET games_won = games_won + 1, games_played = games_played + 1 WHERE id = " . $game['player1_id']);
-                    $mysqli->query("UPDATE users SET games_lost = games_lost + 1, games_played = games_played + 1 WHERE id = " . $game['player2_id']);
-                } elseif ($player2_final_score > $player1_final_score) {
-                    // Player 2 νικητής
-                    $mysqli->query("UPDATE users SET games_won = games_won + 1, games_played = games_played + 1 WHERE id = " . $game['player2_id']);
-                    $mysqli->query("UPDATE users SET games_lost = games_lost + 1, games_played = games_played + 1 WHERE id = " . $game['player1_id']);
-                } else {
-                    // Ισοπαλία
-                    $mysqli->query("UPDATE users SET games_played = games_played + 1 WHERE id = " . $game['player1_id']);
-                    $mysqli->query("UPDATE users SET games_played = games_played + 1 WHERE id = " . $game['player2_id']);
-                }
+        }
+
+        // Checker: συνολικοί πόντοι από φύλλα (χωρίς ξερές) πρέπει να είναι 25
+        // 4 άσσοι (4) + S2 (1) + 10άρια (5: D10=2 + 3×1) + J,Q,K (12) + περισσότερες κάρτες (3) = 25
+        $combined_card_points = $player1_card_score + $player2_card_score;
+        if ($combined_card_points !== 25) {
+            error_log("[XERI] Card-points integrity check failed for game_id={$game_id}: combined={$combined_card_points} (p1={$player1_card_score}, p2={$player2_card_score}, p1_count={$p1_count}, p2_count={$p2_count})");
+        }
+        
+        // Προσθήκη των υπαρχόντων πόντων ξερής
+        $player1_final_score = $player1_card_score + intval($game['player1_score']);
+        $player2_final_score = $player2_card_score + intval($game['player2_score']);
+        
+        // Ενημέρωση παιχνιδιού ως finished
+        $mysqli->query("UPDATE games SET 
+            status = 'finished',
+            table_cards = '[]',
+            player1_collected = '" . json_encode($player1_collected) . "',
+            player2_collected = '" . json_encode($player2_collected) . "',
+            player1_score = $player1_final_score,
+            player2_score = $player2_final_score
+            WHERE id = $game_id");
+        
+        // Ενημέρωση στατιστικών (ΜΟΝΟ ΜΙΑ ΦΟΡΑ και μόνο για PvP παιχνίδια)
+        if ($game['player1_id'] && $game['player2_id']) {
+            if ($player1_final_score > $player2_final_score) {
+                // Player 1 νικητής
+                $mysqli->query("UPDATE users SET games_won = games_won + 1, games_played = games_played + 1 WHERE id = " . $game['player1_id']);
+                $mysqli->query("UPDATE users SET games_lost = games_lost + 1, games_played = games_played + 1 WHERE id = " . $game['player2_id']);
+            } elseif ($player2_final_score > $player1_final_score) {
+                // Player 2 νικητής
+                $mysqli->query("UPDATE users SET games_won = games_won + 1, games_played = games_played + 1 WHERE id = " . $game['player2_id']);
+                $mysqli->query("UPDATE users SET games_lost = games_lost + 1, games_played = games_played + 1 WHERE id = " . $game['player1_id']);
+            } else {
+                // Ισοπαλία
+                $mysqli->query("UPDATE users SET games_played = games_played + 1 WHERE id = " . $game['player1_id']);
+                $mysqli->query("UPDATE users SET games_played = games_played + 1 WHERE id = " . $game['player2_id']);
             }
         }
         
@@ -193,16 +169,36 @@ function check_and_redeal($mysqli, $game_id) {
 // Υπολογισμός πόντων από κάρτες
 function calculate_card_score($cards) {
     $score = 0;
+    
     foreach ($cards as $card) {
+        $suit = substr($card, 0, 1);
         $rank = intval(substr($card, 1));
+        
+        // Όλοι οι άσσοι: 1 πόντος
         if ($rank === 1) {
-            $score += 1; // Άσσοι
-        } elseif ($card === 'C2') {
-            $score += 1; // Καλό δύο (Δύο Σπαθί)
-        } elseif ($card === 'D10') {
-            $score += 2; // Καλό δέκα (Δέκα Καρό)
+            $score += 1;
+        }
+        
+        // S2 (2 Σπαθί): 1 πόντος
+        if ($card === 'S2') {
+            $score += 1;
+        }
+        
+        // D10 (10 Καρό): 2 πόντοι
+        if ($card === 'D10') {
+            $score += 2;
+        }
+        // Όλα τα ΑΛΛΑ 10άρια (εκτός D10): 1 πόντος
+        elseif ($rank === 10) {
+            $score += 1;
+        }
+        
+        // Όλα τα J (11), Q (12), K (13): 1 πόντος
+        if ($rank === 11 || $rank === 12 || $rank === 13) {
+            $score += 1;
         }
     }
+    
     return $score;
 }
 

@@ -1,6 +1,6 @@
 <?php
 // api/cancel_game.php
-require_once '../db.php';
+require_once __DIR__ . '/../db.php';
 header('Content-Type: application/json');
 
 if (!isset($_POST['game_id']) || !isset($_SESSION['user_id'])) {
