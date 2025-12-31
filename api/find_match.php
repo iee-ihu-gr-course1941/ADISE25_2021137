@@ -13,6 +13,16 @@ if (!isset($_SESSION['user_id'])) {
 }
 $my_id = $_SESSION['user_id']; 
 
+// Δημιουργία πίνακα matchmaking_queue αν δεν υπάρχει
+$mysqli->query("
+    CREATE TABLE IF NOT EXISTS matchmaking_queue (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT UNIQUE NOT NULL,
+        joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+");
+
 // 1. Ψάχνουμε για παιχνίδι που είναι 'waiting' (PvP matchmaking)
 // Χρησιμοποιούμε FOR UPDATE για να κλειδώσουμε τη γραμμή (αποφυγή race condition)
 $sql_search = "SELECT id, player1_id FROM games WHERE status = 'waiting' AND player2_id IS NULL LIMIT 1 FOR UPDATE";
@@ -51,6 +61,9 @@ if ($result->num_rows > 0) {
         $_SESSION['player_side'] = 2;
         $_SESSION['game_id'] = $game_id;
 
+        // Αφαίρεση του P1 από το matchmaking_queue
+        $mysqli->query("DELETE FROM matchmaking_queue WHERE user_id = $p1_id");
+
         echo json_encode([
             'status' => 'joined',
             'game_id' => $game_id,
@@ -84,6 +97,9 @@ if ($result->num_rows > 0) {
         // Session: Είμαστε ο Παίκτης 1
         $_SESSION['player_side'] = 1;
         $_SESSION['game_id'] = $game_id;
+
+        // Προσθήκη στο matchmaking_queue
+        $mysqli->query("INSERT INTO matchmaking_queue (user_id) VALUES ($my_id) ON DUPLICATE KEY UPDATE joined_at = NOW()");
 
         echo json_encode([
             'status' => 'waiting',

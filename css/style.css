@@ -130,8 +130,9 @@ h1 {
     display: flex;
     justify-content: center; /* Κεντράρισμα των χαρτιών */
     align-items: center;
-    gap: 10px; /* Κενό ανάμεσα στα χαρτιά */
+    gap: 8px; /* Μικρότερο κενό για να χωράνε περισσότερα */
     min-height: 120px; /* Ελάχιστο ύψος για να χωράει το χαρτί */
+    flex-wrap: nowrap; /* Δεν πάνε σε νέα σειρά */
 }
 
 /* Ειδικά για το τραπέζι στη μέση */
@@ -141,11 +142,16 @@ h1 {
     padding: 20px;
     margin: 10px 50px; /* Να μην κολλάει στις άκρες */
     min-height: 150px;
+    flex-wrap: wrap; /* Επιτρέπει τα φύλλα να πάνε σε νέα σειρά αν χρειάζεται */
+    justify-content: center;
+    align-content: center;
 }
 
 /* Τα χαρτιά στο τραπέζι στοιβάζονται με overlap */
 #table-area .card {
-    margin-left: -40px; /* Overlap 50% του πλάτους (80px/2) */
+    margin-left: -30px; /* Overlap - μικρότερο για να χωράνε περισσότερα */
+    flex-shrink: 0; /* ΔΕΝ επιτρέπεται να συμπιεστεί */
+    min-width: 50px; /* Ελάχιστο πλάτος */
 }
 
 #table-area .card:first-child {
@@ -191,6 +197,8 @@ h1 {
 .card {
     width: 80px;            /* Σταθερό πλάτος */
     height: 120px;          /* Σταθερό ύψος */
+    min-width: 50px;        /* Ελάχιστο πλάτος */
+    min-height: 75px;       /* Ελάχιστο ύψος */
     flex-shrink: 0;         /* Απαγορεύει στο flexbox να το "ζουλήξει" */
     
     background-color: white; /* Λευκό φόντο πίσω από την εικόνα */
@@ -220,6 +228,9 @@ h1 {
 .card-back {
     width: 80px;
     height: 120px;
+    min-width: 50px;  /* Ελάχιστο πλάτος */
+    min-height: 75px; /* Ελάχιστο ύψος */
+    flex-shrink: 0;   /* ΔΕΝ επιτρέπεται να συμπιεστεί */
     border-radius: 8px;
     /* Ένα ωραίο μπλε μοτίβο για την πλάτη */
     background: repeating-linear-gradient(
@@ -413,6 +424,91 @@ button:hover {
 .stat-value.draw { color: #00ffea; } 
 .stat-value.total { color: #ffd700; } 
 
+/* ΝΕΟ: Στυλ για το Leaderboard */
+#leaderboard-box {
+    position: absolute;
+    top: 50%;
+    left: 50px; /* Αριστερή μεριά */
+    transform: translateY(-50%);
+    
+    background-color: rgba(0, 0, 0, 0.6);
+    padding: 20px 30px;
+    border-radius: 15px;
+    border: 1px solid #ffd700;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+    width: 280px;
+    animation: fadeIn 1.5s ease-in;
+}
+
+#leaderboard-box h2 {
+    color: #ffd700;
+    font-size: 22px;
+    margin-top: 0;
+    margin-bottom: 15px;
+    text-shadow: 1px 1px 3px black;
+}
+
+.leaderboard-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 5px;
+    margin: 5px 0;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    transition: all 0.2s;
+}
+
+.leaderboard-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateX(5px);
+}
+
+.leaderboard-rank {
+    font-size: 20px;
+    font-weight: bold;
+    color: #ffd700;
+    min-width: 30px;
+    text-align: center;
+}
+
+.leaderboard-rank.first { color: #FFD700; text-shadow: 0 0 10px #FFD700; }
+.leaderboard-rank.second { color: #C0C0C0; text-shadow: 0 0 10px #C0C0C0; }
+.leaderboard-rank.third { color: #CD7F32; text-shadow: 0 0 10px #CD7F32; }
+
+.leaderboard-info {
+    flex: 1;
+    margin-left: 10px;
+    text-align: left;
+}
+
+.leaderboard-username {
+    font-weight: bold;
+    font-size: 16px;
+    color: #fff;
+    display: block;
+    margin-bottom: 2px;
+}
+
+.leaderboard-stats {
+    font-size: 12px;
+    color: #aaa;
+}
+
+.leaderboard-wins {
+    font-size: 18px;
+    font-weight: bold;
+    color: #32cd32;
+    min-width: 40px;
+    text-align: right;
+}
+
+.loading-text {
+    color: #aaa;
+    font-style: italic;
+    padding: 20px;
+}
+
 
 /* --- LOGIN / SIGNUP STYLES --- */
 .auth-form-container {
@@ -469,8 +565,29 @@ button:hover {
 
 /* --- RESPONSIVE ΡΥΘΜΙΣΕΙΣ ΓΙΑ ΚΙΝΗΤΑ --- */
 
-/* Όταν η οθόνη είναι μικρότερη από 600px (δηλαδή κινητά) */
-@media (max-width: 800px) {
+/* Μεσαίες οθόνες (tablets) */
+@media (max-width: 1200px) {
+    #stats-box, #leaderboard-box {
+        width: 220px;
+        padding: 15px 20px;
+    }
+    
+    #stats-box h2, #leaderboard-box h2 {
+        font-size: 18px;
+    }
+    
+    .stat-label, .leaderboard-username {
+        font-size: 14px;
+    }
+}
+
+/* Μικρές οθόνες (tablets/μικρά laptops) */
+@media (max-width: 900px) {
+    #main-menu {
+        padding: 20px;
+        overflow-y: auto; /* Scroll αν χρειάζεται */
+    }
+    
     /* Επαναφορά positioning για μικρές οθόνες */
     #stats-box {
         position: relative;
@@ -478,19 +595,120 @@ button:hover {
         right: auto;
         transform: none;
         width: 90%;
-        max-width: 350px;
-        margin-top: 30px; /* Προσθέτουμε κενό από τα κουμπιά */
+        max-width: 320px;
+        margin-top: 20px;
+    }
+    
+    #leaderboard-box {
+        position: relative;
+        top: auto;
+        left: auto;
+        transform: none;
+        width: 90%;
+        max-width: 320px;
+        margin-top: 20px;
     }
     
     .menu-container {
-        /* Revert flex-direction to column to stack elements */
         flex-direction: column; 
-        gap: 30px;
-        /* The main-menu centering will center all items in the column */
+        gap: 15px;
+        padding-bottom: 30px; /* Χώρος στο τέλος */
+    }
+    
+    .menu-title {
+        font-size: 50px;
+    }
+    
+    .menu-subtitle {
+        font-size: 18px;
+        margin-bottom: 20px;
+    }
+    
+    .menu-btn {
+        width: 200px;
+        padding: 12px;
+        font-size: 18px;
+        margin: 10px auto;
+    }
+    
+    .logout-btn {
+        width: 200px;
+        margin-top: 15px;
     }
 }
 
+/* Πολύ μικρές οθόνες (κινητά) */
 @media (max-width: 600px) {
+    #main-menu {
+        padding: 10px;
+    }
+    
+    .menu-title {
+        font-size: 40px;
+        letter-spacing: 2px;
+    }
+    
+    .menu-subtitle {
+        font-size: 16px;
+        margin-bottom: 15px;
+    }
+    
+    .menu-btn {
+        width: 180px;
+        padding: 10px;
+        font-size: 16px;
+        margin: 8px auto;
+    }
+    
+    .logout-btn {
+        width: 180px;
+        font-size: 14px;
+    }
+    
+    #stats-box, #leaderboard-box {
+        width: 95%;
+        max-width: 280px;
+        padding: 15px;
+        margin-top: 15px;
+    }
+    
+    #stats-box h2, #leaderboard-box h2 {
+        font-size: 16px;
+        margin-bottom: 10px;
+    }
+    
+    .stat-item {
+        padding: 5px 0;
+    }
+    
+    .stat-label {
+        font-size: 13px;
+    }
+    
+    .stat-value {
+        font-size: 14px;
+    }
+    
+    .leaderboard-item {
+        padding: 8px 3px;
+    }
+    
+    .leaderboard-rank {
+        font-size: 16px;
+        min-width: 25px;
+    }
+    
+    .leaderboard-username {
+        font-size: 13px;
+    }
+    
+    .leaderboard-stats {
+        font-size: 10px;
+    }
+    
+    .leaderboard-wins {
+        font-size: 14px;
+    }
     
     /* 1. Μικραίνουμε τα κενά ανάμεσα στις ζώνες */
     #game-board {
@@ -518,13 +736,26 @@ button:hover {
     .card, .card-back {
         width: 50px;   /* Από 80px το πάμε 50px */
         height: 75px;  /* Από 120px το πάμε 75px */
+        min-width: 40px;  /* Ελάχιστο πλάτος */
+        min-height: 60px; /* Ελάχιστο ύψος */
         border-radius: 4px;
+        flex-shrink: 0; /* ΔΕΝ επιτρέπεται να συμπιεστεί */
     }
 
     /* 3. Μικραίνουμε τα κενά ανάμεσα στα χαρτιά */
     #opponent-hand, #table-area, #my-hand {
-        gap: 5px;      /* Από 10px το πάμε 5px */
+        gap: 4px;      /* Πολύ μικρό κενό */
         min-height: 80px;
+        flex-wrap: nowrap; /* Δεν πάνε σε νέα σειρά */
+    }
+    
+    /* Overlap για τα χαρτιά στο τραπέζι σε μικρές οθόνες */
+    #table-area .card {
+        margin-left: -20px;
+    }
+    
+    #table-area .card:first-child {
+        margin-left: 0;
     }
 
     /* 4. Μικραίνουμε λίγο τα γράμματα */

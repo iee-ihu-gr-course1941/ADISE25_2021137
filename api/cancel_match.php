@@ -42,12 +42,15 @@ if ($game_info['status'] !== 'waiting' || intval($game_info['player1_id']) !== $
     exit;
 }
 
-// 4. Διαγραφή παιχνιδιού
+// 4. Διαγραφή παιχνιδιού και αφαίρεση από matchmaking_queue
 $delete_result = $mysqli->query("DELETE FROM games WHERE id = $game_id");
 if (!$delete_result) {
     echo json_encode(['error' => 'Database delete error: ' . $mysqli->error]);
     exit;
 }
+
+// Αφαίρεση από matchmaking_queue
+$mysqli->query("DELETE FROM matchmaking_queue WHERE user_id = $quitter_id");
 
 // 5. Καθάρισε το session
 if (isset($_SESSION['game_id']) && $_SESSION['game_id'] == $game_id) {

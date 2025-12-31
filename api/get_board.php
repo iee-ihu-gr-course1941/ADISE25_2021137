@@ -37,8 +37,19 @@ $opp_name_display = ($my_side == 1) ? $p2_name : $p1_name;
 
 // Έλεγχος αν περιμένουμε αντίπαλο
 if ($game_info['status'] === 'waiting') {
-    echo json_encode(['status' => 'waiting_for_opponent']);
+    echo json_encode([
+        'status' => 'waiting_for_opponent',
+        'game_id' => $game_id,
+        'player_side' => $my_side
+    ]);
     exit;
+}
+
+// ΝΕΟΣ ΕΛΕΓΧΟΣ: Αν το game μόλις έγινε active (βρέθηκε αντίπαλος)
+// και ο client νομίζει ότι είναι ακόμα σε waiting, στείλε σήμα
+if ($game_info['status'] === 'active' && $game_info['player2_id'] !== null) {
+    // Το game είναι ενεργό, συνέχισε κανονικά
+    // (Το frontend θα δει την αλλαγή από το status: 'active')
 }
 
 // ΝΕΟΣ ΕΛΕΓΧΟΣ: Heartbeat (polling) για ανίχνευση disconnect/κλείσιμο browser σε PvP
@@ -69,10 +80,11 @@ if ($game_info['status'] === 'active' && $game_info['player2_id'] !== null) {
         $opp_seen_res = $mysqli->query("SELECT last_seen FROM game_presence WHERE game_id = $game_id AND user_id = $opp_user_id");
         $opp_last_seen = ($opp_seen_res && ($row = $opp_seen_res->fetch_assoc())) ? $row['last_seen'] : null;
 
-        // Αν ο αντίπαλος είχε κάνει έστω ένα poll και μετά εξαφανίστηκε για >30s -> θεωρείται disconnect
+        // Αν ο αντίπαλος είχε κάνει έστω ένα poll και μετά εξαφανίστηκε για >60s -> θεωρείται disconnect (backup)
+        // Κύρια ανίχνευση γίνεται με beforeunload στο frontend
         if ($opp_last_seen !== null) {
             $inactive_seconds = time() - strtotime($opp_last_seen);
-            if ($inactive_seconds > 30) {
+            if ($inactive_seconds > 60) {
                 $winner_side = $my_side;
                 $winner_user_id = ($winner_side == 1) ? intval($game_info['player1_id']) : intval($game_info['player2_id']);
                 $loser_user_id = ($winner_side == 1) ? intval($game_info['player2_id']) : intval($game_info['player1_id']);
@@ -126,10 +138,10 @@ if ($game_info['status'] === 'finished') {
     if ($is_likely_quit && $game_info['player2_id'] !== null && $game_info['last_to_collect'] !== null) {
         if (intval($game_info['last_to_collect']) == $my_side) {
             $winner = 'me';
-            $final_message = "Νίκησες! Ο αντίπαλος αποσυνδέθηκε/εγκατέλειψε.";
+            $final_message = "🎉 Νίκησες! Ο αντίπαλος αποχώρησε από το παιχνίδι.";
         } else {
             $winner = 'opponent';
-            $final_message = "Έχασες! Αποσυνδέθηκες/εγκατέλειψες.";
+            $final_message = "Έχασες. Αποχώρησες από το παιχνίδι.";
         }
     } else {
         // Κανονική λήξη με βάση το σκορ

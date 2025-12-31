@@ -4,6 +4,27 @@ var botThinking = false;        // Για να μην παίζει διπλές 
 var pollingInterval = null;     // Το χρονόμετρο για την ανανέωση
 var myPlayerSide = 1;           // Ποιος είμαι; (1 ή 2). Default 1.
 var currentGameId = null;       // Το ID του παιχνιδιού
+var isInPvPGame = false;        // Flag για PvP παιχνίδι
+
+// ---------------------------------------------------------
+// DISCONNECT DETECTION - Ανίχνευση κλεισίματος tab/browser
+// ---------------------------------------------------------
+window.addEventListener('beforeunload', function(e) {
+    // Στέλνουμε σήμα αποχώρησης ΜΟΝΟ αν είμαστε σε ενεργό PvP παιχνίδι
+    if (currentGameId && isInPvPGame) {
+        // Χρησιμοποιούμε sendBeacon γιατί δουλεύει ακόμα και όταν κλείνει η σελίδα
+        navigator.sendBeacon('api/player_disconnect.php', '');
+    }
+});
+
+// Επίσης στέλνουμε σήμα όταν κρύβεται η σελίδα (αλλαγή tab ή minimize - προαιρετικό)
+document.addEventListener('visibilitychange', function() {
+    // Αυτό είναι προαιρετικό - μπορεί να το αφαιρέσεις αν δεν θέλεις
+    // να χάνεις όταν απλά αλλάζεις tab
+    // if (document.visibilityState === 'hidden' && currentGameId && isInPvPGame) {
+    //     navigator.sendBeacon('api/player_disconnect.php', '');
+    // }
+});
 
 // ---------------------------------------------------------
 // AUTHENTICATION LOGIC (Global Functions used by index.php)
@@ -108,6 +129,46 @@ function fetchUserStats() {
     });
 }
 
+// ΝΕΟ: Φόρτωση Leaderboard
+function fetchLeaderboard() {
+    console.log("Fetching leaderboard...");
+    $.ajax({
+        url: 'api/get_leaderboard.php',
+        type: 'GET',
+        dataType: 'json',
+        success: function(response) {
+            console.log("Leaderboard response:", response);
+            if (response.status === 'success' && response.leaderboard && response.leaderboard.length > 0) {
+                var html = '';
+                response.leaderboard.forEach(function(player) {
+                    var rankClass = '';
+                    if (player.rank === 1) rankClass = 'first';
+                    else if (player.rank === 2) rankClass = 'second';
+                    else if (player.rank === 3) rankClass = 'third';
+                    
+                    html += '<div class="leaderboard-item">';
+                    html += '  <div class="leaderboard-rank ' + rankClass + '">' + player.rank + '</div>';
+                    html += '  <div class="leaderboard-info">';
+                    html += '    <span class="leaderboard-username">' + player.username + '</span>';
+                    html += '    <span class="leaderboard-stats">' + player.wins + 'W / ' + player.losses + 'L</span>';
+                    html += '  </div>';
+                    html += '  <div class="leaderboard-wins">🏆 ' + player.wins + '</div>';
+                    html += '</div>';
+                });
+                $('#leaderboard-list').html(html);
+            } else {
+                console.log("No leaderboard data or empty");
+                $('#leaderboard-list').html('<div class="loading-text">Δεν υπάρχουν παίκτες</div>');
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error("Error fetching leaderboard:", error);
+            console.error("XHR:", xhr.responseText);
+            $('#leaderboard-list').html('<div class="loading-text">Σφάλμα φόρτωσης</div>');
+        }
+    });
+}
+
 
 $(document).ready(function() {
     
@@ -137,8 +198,9 @@ $(document).ready(function() {
         // ΝΕΟ: Απόκρυψη και του κουμπιού ακύρωσης στην αρχή
         $('#btn-cancel-pvp').hide(); 
 
-        // ΝΕΟ: Φόρτωσε τα στατιστικά του παίκτη
+        // ΝΕΟ: Φόρτωσε τα στατιστικά του παίκτη και το leaderboard
         fetchUserStats(); 
+        fetchLeaderboard();
     }
 });
 
@@ -203,6 +265,7 @@ function cancelMatchmaking() {
             // Επαναφορά στο Main Menu
             currentGameId = null;
             myPlayerSide = 1;
+            isInPvPGame = false; // Απενεργοποίηση disconnect detection
             $('#waiting-screen').hide();
             $('#main-menu').removeClass('hidden'); 
             
@@ -231,6 +294,7 @@ function initGame(mode) {
     
     if (mode === 'pve') {
         // --- ΛΕΙΤΟΥΡΓΙΑ VS COMPUTER ---
+        isInPvPGame = false; // PvE δεν χρειάζεται disconnect detection
         $.ajax({
             url: 'api/init_game.php',
             type: 'POST',
@@ -242,6 +306,8 @@ function initGame(mode) {
                     return;
                 }
                 $('#main-menu').addClass('hidden');
+                $('#game-board').show(); // Εμφάνιση του game board για PvE
+                $('#ui-layer').show(); // Εμφάνιση του UI layer για PvE
                 currentGameId = response.game_id;
                 
                 // Στο PvE είμαστε πάντα ο Παίκτης 1
@@ -256,8 +322,11 @@ function initGame(mode) {
     else if (mode === 'pvp') {
         // --- ΛΕΙΤΟΥΡΓΙΑ VS PLAYER 2 ---
         $('#main-menu').addClass('hidden');
+        $('#game-board').hide(); // Κρύψε το game board αρχικά
+        $('#ui-layer').hide(); // Κρύψε το UI layer αρχικά
         $('#waiting-screen').css('display', 'flex'); // Εμφάνιση οθόνης αναμονής
         $('#btn-cancel-pvp').hide();
+        isInPvPGame = true; // Ενεργοποίηση disconnect detection
         
         $.ajax({
             url: 'api/find_match.php',
@@ -269,6 +338,7 @@ function initGame(mode) {
                     alert("Σφάλμα εύρεσης παιχνιδιού: " + response.error);
                     $('#waiting-screen').hide();
                     $('#main-menu').removeClass('hidden'); // Επιστροφή στο μενού
+                    isInPvPGame = false; // Απενεργοποίηση disconnect detection
                     return;
                 }
                 
@@ -290,6 +360,7 @@ function initGame(mode) {
                 alert("Σφάλμα κατά την αναζήτηση παιχνιδιού.");
                 $('#waiting-screen').hide();
                 $('#main-menu').removeClass('hidden'); // Επιστροφή στο μενού
+                isInPvPGame = false; // Απενεργοποίηση disconnect detection
             }
         });
     }
@@ -325,6 +396,8 @@ function fetchBoardData() {
         dataType: 'json',
         success: function(data) {
             
+            console.log('Polling response:', data); // Debugging log
+            
             if (data.error) { 
                 console.error("Game data error:", data.error);
                 return;
@@ -332,9 +405,12 @@ function fetchBoardData() {
 
             // A. Έλεγχος για αναμονή αντιπάλου (PvP)
             if (data.status === 'waiting_for_opponent') {
+                console.log('Waiting for opponent... Game ID:', currentGameId);
                 $('#waiting-screen').show();
+                $('#game-board').hide(); // Κρύψε το game board
+                $('#ui-layer').hide(); // Κρύψε το UI layer
                 // Ενημέρωση τίτλου
-                $('#waiting-screen h2').html('Αναζήτηση Αντιπάλου...<br><small>Game ID: ' + currentGameId + '</small>');
+                $('#waiting-screen h2').html('Αναζήτηση Αντιπάλου...');
                 $('#btn-quit-game').hide(); // Κρύψε το κουμπί αναμονής
                 
                 // Εμφάνισε το κουμπί ακύρωσης ΜΟΝΟ αν είμαι ο P1
@@ -353,36 +429,31 @@ function fetchBoardData() {
                 $('#btn-cancel-pvp').hide();
                 $('#game-over-screen').css('display', 'flex'); 
                 
+                // Απενεργοποίηση disconnect detection (το παιχνίδι τελείωσε)
+                isInPvPGame = false;
+                currentGameId = null;
+                
                 // Κρύψε το κουμπί στο game over
                 $('#btn-quit-game').hide(); 
 
                 // Μήνυμα Νίκης/Ήττας/Ισοπαλίας
-                // Εξασφαλίζουμε ότι το μήνυμα ταιριάζει με το flag 'winner' (ο νικητής βλέπει "Νίκησες")
-                var extra = '';
-                if (typeof data.final_message === 'string') {
-                    var lm = data.final_message.toLowerCase();
-                    var idx = -1;
-                    if (lm.indexOf('αποσυνδ') !== -1) idx = lm.indexOf('αποσυνδ');
-                    else if (lm.indexOf('εγκατ') !== -1) idx = lm.indexOf('εγκατ');
-                    if (idx !== -1) {
-                        extra = ' ' + data.final_message.substring(idx);
-                    }
-                }
-
+                // Χρησιμοποιούμε απευθείας το final_message από τον server
+                var finalMessage = data.final_message || '';
+                
                 // Normalize winner values (be defensive)
                 var winnerFlag = String(data.winner || '').toLowerCase();
                 var iAmWinner = (winnerFlag === 'me' || winnerFlag === '1' || winnerFlag === 'true');
                 var oppIsWinner = (winnerFlag === 'opponent' || winnerFlag === '2' || winnerFlag === 'false');
 
                 if (iAmWinner) {
-                    $('#go-title').text('Νίκησες!' + extra);
+                    $('#go-title').text(finalMessage || 'Νίκησες!');
                     $('#go-title').css('color', '#32cd32');
                 } else if (oppIsWinner) {
-                    $('#go-title').text('Έχασες!' + extra);
+                    $('#go-title').text(finalMessage || 'Έχασες!');
                     $('#go-title').css('color', '#ff4d4d');
                 } else {
                     // draw or unknown: use provided message
-                    $('#go-title').text(data.final_message);
+                    $('#go-title').text(finalMessage || 'Ισοπαλία!');
                     $('#go-title').css('color', 'gold');
                 }
 
@@ -398,8 +469,30 @@ function fetchBoardData() {
             }
 
             // Γ. Κανονική Ροή Παιχνιδιού
-            $('#waiting-screen').hide();
+            console.log('Game is active! Status:', data.status);
+            
+            // Εμφάνιση μηνύματος "Βρέθηκε αντίπαλος!" πριν ξεκινήσει το game
+            if ($('#waiting-screen').is(':visible')) {
+                $('#waiting-screen h2').html('Βρέθηκε Αντίπαλος! Το παιχνίδι ξεκινάει...');
+                $('#waiting-screen h2').css('color', '#00ff00');
+                // Μικρή καθυστέρηση για να δει ο χρήστης το μήνυμα
+                setTimeout(function() {
+                    $('#waiting-screen').hide();
+                    $('#game-board').show();
+                    $('#ui-layer').show();
+                }, 500);
+            } else {
+                $('#waiting-screen').hide();
+                $('#game-board').show(); // Εμφάνιση του game board
+                $('#ui-layer').show(); // Εμφάνιση του UI layer
+            }
+            
             $('#btn-cancel-pvp').hide(); // Κρύψε το κουμπί μόλις βρεθεί game
+            
+            // Βεβαίωση ότι το disconnect detection είναι ενεργό για PvP
+            if (data.game_mode === 'pvp') {
+                isInPvPGame = true;
+            }
             
             // Εμφάνιση του κουμπιού εξόδου
             $('#btn-quit-game').show();

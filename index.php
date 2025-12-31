@@ -82,6 +82,13 @@ require_once 'db.php'; // Μόνο η σύνδεση χρειάζεται (γι�
                 </div>
             </div>
 
+            <div id="leaderboard-box">
+                <h2>🏆 TOP 5 Παίκτες</h2>
+                <div id="leaderboard-list">
+                    <div class="loading-text">Φόρτωση...</div>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -168,7 +175,7 @@ require_once 'db.php'; // Μόνο η σύνδεση χρειάζεται (γι�
             $('#ui-layer, #game-board').hide();
         <?php endif; ?>
     </script>
-    <script src="js/game.js"></script>
+    <script src="js/game.js?v=<?php echo time(); ?>"></script>
 
 </body>
 </html>
