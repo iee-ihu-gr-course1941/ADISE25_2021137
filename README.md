@@ -1318,11 +1318,11 @@ var isInPvPGame = false;      // Enable disconnect detection?
 ### PvE Game Flow
 ```
 ┌─────────────┐     ┌──────────────┐     ┌───────────────┐
-│  Main Menu  │────▶│ init_game.php│────▶│ Game Created  │
+│  Main Menu  │───▶│ init_game.php│────▶│ Game Created  │
 │   (PLAY)    │     │   (POST)     │     │ status=active │
 └─────────────┘     └──────────────┘     └───────┬───────┘
-                                                  │
-       ┌──────────────────────────────────────────┘
+                                                 │
+       ┌─────────────────────────────────────────┘
        ▼
 ┌──────────────┐     ┌───────────────┐     ┌──────────────┐
 │ get_board.php│◀───▶│  Render Game  │◀───▶│ play_card.php│
@@ -1330,7 +1330,7 @@ var isInPvPGame = false;      // Enable disconnect detection?
 └──────────────┘     └───────────────┘     └──────────────┘
        │                                          │
        │              ┌───────────────┐           │
-       └─────────────▶│ bot_play.php  │◀──────────┘
+       └─────────────▶│ bot_play.php  │◀─────────┘
                       │  (Bot Move)   │
                       └───────────────┘
                               │
@@ -1371,19 +1371,19 @@ var isInPvPGame = false;      // Enable disconnect detection?
          ┌──────────────────────┴──────────────────────┐
          ▼                                             ▼
 ┌─────────────────┐                         ┌─────────────────┐
-│ get_board.php   │◀───────────────────────▶│ get_board.php   │
+│ get_board.php   │◀───────────────────────▶│ get_board.php  │
 │ (Player 1 Poll) │                         │ (Player 2 Poll) │
 └────────┬────────┘                         └────────┬────────┘
          │                                           │
          ▼                                           ▼
 ┌─────────────────┐                         ┌─────────────────┐
-│ play_card.php   │────────────────────────▶│   Turn Switch   │
+│ play_card.php   │────────────────────────▶│   Turn Switch   |
 │ (P1 Move)       │                         │                 │
 └─────────────────┘                         └─────────────────┘
-
+         |                                           |
          │                                           │
          │     ┌─────────────────────────────┐       │
-         └────▶│ Disconnect/Quit Detection   │◀──────┘
+         └────▶│ Disconnect/Quit Detection   │◀─────┘
                │ player_disconnect.php       │
                │ quit_game.php               │
                └──────────────┬──────────────┘
