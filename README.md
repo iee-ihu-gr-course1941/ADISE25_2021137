@@ -630,8 +630,8 @@ ON DUPLICATE KEY UPDATE joined_at = NOW()
 **Request Parameters:**
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `game_id` | int | ✅ Yes | ID of the game to query |
-| `player_side` | int | ✅ Yes | Which player I am (1 or 2) |
+| `game_id` | int |  Yes | ID of the game to query |
+| `player_side` | int |  Yes | Which player I am (1 or 2) |
 
 **Process Flow:**
 1. Validate game_id exists
@@ -737,9 +737,9 @@ $my_score = $my_card_score + intval($game['player1_score']); // + XERI bonus
 **Request Parameters:**
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `card_id` | int | ✅ Yes | Index of card in hand (0-5) |
-| `player_side` | int | ✅ Yes | Which player (1 or 2) |
-| `game_id` | int | ✅ Yes | Current game ID |
+| `card_id` | int |  Yes | Index of card in hand (0-5) |
+| `player_side` | int |  Yes | Which player (1 or 2) |
+| `game_id` | int |  Yes | Current game ID |
 
 **Validation Steps:**
 1. Verify it's a POST request
@@ -1056,8 +1056,8 @@ LIMIT 5
 **Request Parameters:**
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `game_id` | int | ✅ Yes | Game to quit |
-| `player_side` | int | ✅ Yes | Which player (1 or 2) |
+| `game_id` | int |  Yes | Game to quit |
+| `player_side` | int |  Yes | Which player (1 or 2) |
 
 **Process Flow:**
 1. Fetch game information
@@ -1122,7 +1122,7 @@ WHERE id = $winner_user_id
 **Request Parameters:**
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `game_id` | int | ✅ Yes | Game to cancel |
+| `game_id` | int |  Yes | Game to cancel |
 
 **Validation:**
 - Game must be in 'waiting' status
