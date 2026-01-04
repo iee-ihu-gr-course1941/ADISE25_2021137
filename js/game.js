@@ -16,14 +16,7 @@ window.addEventListener('beforeunload', function(e) {
         navigator.sendBeacon('api/player_disconnect.php', '');
     }
 });
-
-// Επίσης στέλνουμε σήμα όταν κρύβεται η σελίδα (αλλαγή tab ή minimize - προαιρετικό)
 document.addEventListener('visibilitychange', function() {
-    // Αυτό είναι προαιρετικό - μπορεί να το αφαιρέσεις αν δεν θέλεις
-    // να χάνεις όταν απλά αλλάζεις tab
-    // if (document.visibilityState === 'hidden' && currentGameId && isInPvPGame) {
-    //     navigator.sendBeacon('api/player_disconnect.php', '');
-    // }
 });
 
 // ---------------------------------------------------------

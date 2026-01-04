@@ -1,6 +1,3 @@
--- XERI GAME - Database Setup Script
--- Εκτέλεσε αυτό το script στον MySQL server του πανεπιστημίου
-
 -- Δημιουργία πίνακα χρηστών
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -49,7 +46,6 @@ CREATE INDEX idx_games_player1 ON games(player1_id);
 CREATE INDEX idx_games_player2 ON games(player2_id);
 CREATE INDEX idx_users_username ON users(username);
 
--- Προαιρετικά: Δημιουργία bot user
 INSERT INTO users (username, password, games_played, games_won, games_lost) 
 VALUES ('bot', '$2y$10$dummyHashForBotAccount', 0, 0, 0)
 ON DUPLICATE KEY UPDATE username=username;

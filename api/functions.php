@@ -1,6 +1,4 @@
 <?php
-// api/functions.php - JSON Version
-
 // Δημιουργία ανακατεμένης τράπουλας
 function generate_shuffled_deck() {
     $suits = ['C', 'D', 'H', 'S']; // Clubs, Diamonds, Hearts, Spades
@@ -24,13 +22,12 @@ function save_deck_to_db($mysqli, $game_id, $deck) {
 
 // Αρχικό μοίρασμα: 4 στο τραπέζι, 6 σε κάθε παίκτη
 function deal_initial_cards($mysqli, $game_id) {
-    // Φέρνουμε την τράπουλα
     $result = $mysqli->query("SELECT deck FROM games WHERE id = $game_id");
     $row = $result->fetch_assoc();
     $deck = json_decode($row['deck'], true);
     
     if (!$deck || count($deck) < 16) {
-        return false; // Δεν έχουμε αρκετά χαρτιά
+        return false;
     }
     
     // Μοιράζουμε

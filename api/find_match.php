@@ -24,7 +24,6 @@ $mysqli->query("
 ");
 
 // 1. Ψάχνουμε για παιχνίδι που είναι 'waiting' (PvP matchmaking)
-// Χρησιμοποιούμε FOR UPDATE για να κλειδώσουμε τη γραμμή (αποφυγή race condition)
 $sql_search = "SELECT id, player1_id FROM games WHERE status = 'waiting' AND player2_id IS NULL LIMIT 1 FOR UPDATE";
 $result = $mysqli->query($sql_search);
 

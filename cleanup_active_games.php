@@ -14,12 +14,12 @@ try {
         $stmt = $pdo->prepare("UPDATE games SET status = 'finished' WHERE status = 'active'");
         $stmt->execute();
         
-        echo "✅ Όλα τα ενεργά παιχνίδια έγιναν 'finished'.\n";
+        echo "Όλα τα ενεργά παιχνίδια έγιναν 'finished'.\n";
     } else {
         echo "Δεν υπάρχουν ενεργά παιχνίδια προς καθαρισμό.\n";
     }
     
 } catch (Exception $e) {
-    echo "❌ Σφάλμα: " . $e->getMessage() . "\n";
+    echo "Σφάλμα: " . $e->getMessage() . "\n";
 }
 ?>

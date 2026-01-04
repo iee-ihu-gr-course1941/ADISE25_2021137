@@ -45,20 +45,13 @@ if ($game_info['status'] === 'waiting') {
     exit;
 }
 
-// ΝΕΟΣ ΕΛΕΓΧΟΣ: Αν το game μόλις έγινε active (βρέθηκε αντίπαλος)
-// και ο client νομίζει ότι είναι ακόμα σε waiting, στείλε σήμα
 if ($game_info['status'] === 'active' && $game_info['player2_id'] !== null) {
-    // Το game είναι ενεργό, συνέχισε κανονικά
-    // (Το frontend θα δει την αλλαγή από το status: 'active')
 }
 
-// ΝΕΟΣ ΕΛΕΓΧΟΣ: Heartbeat (polling) για ανίχνευση disconnect/κλείσιμο browser σε PvP
-// Χρησιμοποιεί ξεχωριστό πίνακα game_presence για να μην πειράξουμε το schema του games.
 if ($game_info['status'] === 'active' && $game_info['player2_id'] !== null) {
     $my_user_id = ($my_side == 1) ? intval($game_info['player1_id']) : intval($game_info['player2_id']);
     $opp_user_id = ($opp_side == 1) ? intval($game_info['player1_id']) : intval($game_info['player2_id']);
 
-    // Best-effort: αν δεν έχουμε δικαιώματα CREATE TABLE, απλά δεν θα δουλέψει το auto-disconnect.
     $mysqli->query(
         "CREATE TABLE IF NOT EXISTS game_presence (\n"
         . "  game_id INT NOT NULL,\n"
@@ -70,7 +63,6 @@ if ($game_info['status'] === 'active' && $game_info['player2_id'] !== null) {
     );
 
     if ($my_user_id > 0 && $opp_user_id > 0) {
-        // Update my heartbeat
         $mysqli->query(
             "INSERT INTO game_presence (game_id, user_id, last_seen) VALUES ($game_id, $my_user_id, NOW()) "
             . "ON DUPLICATE KEY UPDATE last_seen = NOW()"
@@ -121,18 +113,12 @@ if ($game_info['status'] === 'finished') {
     $final_message = "Ισοπαλία!";
 
     // Έλεγχος αν τελείωσε από εγκατάλειψη/αποσύνδεση:
-    // Σε PvP παιχνίδι, αν τα σκορ είναι 0-0 ή πολύ χαμηλά (<5), σημαίνει ότι δεν έπαιξαν καθόλου/λίγο
-    // και κάποιος έκανε quit/disconnect (όχι κανονική λήξη).
-    // Εναλλακτικά, μπορούμε να ελέγξουμε αν υπάρχουν χαρτιά στο deck/χέρια.
     $deck = json_decode($game_info['deck'], true) ?: [];
     $p1_hand = json_decode($game_info['player1_hand'], true) ?: [];
     $p2_hand = json_decode($game_info['player2_hand'], true) ?: [];
     $ended_early = (count($deck) > 0) || (count($p1_hand) > 0) || (count($p2_hand) > 0);
     
     // Αν είναι PvP και υπάρχει last_to_collect ως νικητής από disconnect/quit
-    // (το disconnect logic ΄η quit_game.php ορίζουν το last_to_collect)
-    // Προτεραιότητα: Αν ended_early Ή αν τα συνολικά σκορ είναι πολύ χαμηλά (<10 και τα δύο)
-    $total_score = $my_score + $opp_score;
     $is_likely_quit = ($ended_early || $total_score < 10);
     
     if ($is_likely_quit && $game_info['player2_id'] !== null && $game_info['last_to_collect'] !== null) {
