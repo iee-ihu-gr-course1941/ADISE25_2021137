@@ -503,7 +503,7 @@ function fetchBoardData() {
             renderMyHand(data.my_hand);
             renderOpponent(data.opponent_cards_count);
             renderDeck(data.deck_count);
-            renderPiles(data.my_score, data.opp_score, data.my_pile_count, data.opp_pile_count);
+            renderPiles(data.my_score, data.opp_score, data.my_pile_count, data.opp_pile_count, data.my_last_card, data.opp_last_card);
             
             // Έλεγχος σειράς
             checkTurn(data.is_my_turn, data.game_mode);
@@ -566,7 +566,7 @@ function renderOpponent(count) {
     }
 }
 
-function renderPiles(myScore, oppScore, myCount, oppCount) {
+function renderPiles(myScore, oppScore, myCount, oppCount, myLastCard, oppLastCard) {
     // Μετατροπή σε αριθμούς για ασφάλεια
     var myC = parseInt(myCount) || 0;
     var oppC = parseInt(oppCount) || 0;
@@ -574,23 +574,49 @@ function renderPiles(myScore, oppScore, myCount, oppCount) {
     // --- Η Δικιά μου Στοίβα ---
     var $myPile = $('#my-pile');
     $myPile.empty();
+    $myPile.removeAttr('style'); // Καθαρίζουμε παλιά styles
     
-    // Εμφανίζουμε εικόνα αν έχω έστω και 1 κάρτα
     if (myC > 0) {
-        $myPile.addClass('has-cards'); 
+        if (myLastCard) {
+            // Εμφανίζουμε την κάρτα που έπαιξε με άσπρο background
+            $myPile.removeClass('has-cards');
+            $myPile.attr('style', 
+                'background-image: none !important; ' +
+                'background-color: white !important; ' +
+                'border: none !important; ' +
+                'box-shadow: 2px 2px 0 #1e3c72, 4px 4px 0 white, 6px 6px 5px rgba(0,0,0,0.5) !important;'
+            );
+            $myPile.html('<img src="img/cards/' + myLastCard + '.png" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">');
+        } else {
+            // Αν δεν υπάρχει last_played, εμφανίζουμε το back.png
+            $myPile.addClass('has-cards');
+        }
     } else {
         $myPile.removeClass('has-cards');
     }
-    // Το σκορ ενημερώνεται στην μπάρα ψηλά
     $('#score-me').text(myScore);
 
 
     // --- Στοίβα Αντιπάλου ---
     var $oppPile = $('#opponent-pile');
     $oppPile.empty();
+    $oppPile.removeAttr('style'); // Καθαρίζουμε παλιά styles
     
     if (oppC > 0) {
-        $oppPile.addClass('has-cards');
+        if (oppLastCard) {
+            // Εμφανίζουμε την κάρτα που έπαιξε με άσπρο background
+            $oppPile.removeClass('has-cards');
+            $oppPile.attr('style', 
+                'background-image: none !important; ' +
+                'background-color: white !important; ' +
+                'border: none !important; ' +
+                'box-shadow: 2px 2px 0 #1e3c72, 4px 4px 0 white, 6px 6px 5px rgba(0,0,0,0.5) !important;'
+            );
+            $oppPile.html('<img src="img/cards/' + oppLastCard + '.png" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">');
+        } else {
+            // Αν δεν υπάρχει last_played, εμφανίζουμε το back.png
+            $oppPile.addClass('has-cards');
+        }
     } else {
         $oppPile.removeClass('has-cards');
     }

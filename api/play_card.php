@@ -119,18 +119,27 @@ $next_turn = ($my_side == 1) ? 2 : 1;
 $my_hand_field = ($my_side == 1) ? 'player1_hand' : 'player2_hand';
 $my_collected_field = ($my_side == 1) ? 'player1_collected' : 'player2_collected';
 $my_score_field = ($my_side == 1) ? 'player1_score' : 'player2_score';
+$my_last_played_field = ($my_side == 1) ? 'player1_last_played' : 'player2_last_played';
 
 // Υπολογισμός νέου σκορ (προσθήκη πόντων ξερής αν υπάρχουν)
 $new_score = intval($game[$my_score_field]) + $xeri_points;
 
-$update_sql = "UPDATE games SET 
-    $my_hand_field = '" . $mysqli->real_escape_string(json_encode($my_hand)) . "',
-    $my_collected_field = '" . $mysqli->real_escape_string(json_encode($my_collected)) . "',
-    table_cards = '" . $mysqli->real_escape_string(json_encode($table_cards)) . "',
-    current_player = $next_turn,
-    last_to_collect = " . ($last_to_collect ?: "NULL") . ",
-    $my_score_field = $new_score
-    WHERE id = $game_id";
+// Δημιουργία UPDATE query με δυναμικά πεδία
+$update_parts = [
+    "$my_hand_field = '" . $mysqli->real_escape_string(json_encode($my_hand)) . "'",
+    "$my_collected_field = '" . $mysqli->real_escape_string(json_encode($my_collected)) . "'",
+    "table_cards = '" . $mysqli->real_escape_string(json_encode($table_cards)) . "'",
+    "current_player = $next_turn",
+    "last_to_collect = " . ($last_to_collect ?: "NULL"),
+    "$my_score_field = $new_score"
+];
+
+// Ενημέρωση last_played: ΜΟΝΟ αν μάζεψε (αλλιώς μένει η προηγούμενη τιμή)
+if ($action === 'collect') {
+    $update_parts[] = "$my_last_played_field = '$played_card'";
+}
+
+$update_sql = "UPDATE games SET " . implode(', ', $update_parts) . " WHERE id = $game_id";
 
 if (!$mysqli->query($update_sql)) {
     echo json_encode(['error' => 'Database error: ' . $mysqli->error]);

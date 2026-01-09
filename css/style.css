@@ -712,106 +712,138 @@ button:hover {
     
     /* 1. Μικραίνουμε τα κενά ανάμεσα στις ζώνες */
     #game-board {
-        padding: 10px;
+        padding: 5px;
     }
 
     #table-area {
-        margin: 5px 5px;
-        min-height: 100px;
-        max-height: 150px; /* Μικρότερο max-height για κινητά */
-        max-width: calc(100% - 70px); /* Αφήνει χώρο για το draw-pile σε κινητά */
+        margin: 5px 10px;
+        min-height: 80px;
+        max-height: 120px;
+        max-width: 100%;
+        padding: 10px 5px;
     }
     
     #middle-zone {
-        gap: 10px; /* Μικρότερο gap για κινητά */
+        gap: 5px;
         padding: 0 5px;
     }
 
     .score-pile {
-        width: 50px;
-        height: 75px;
+        width: 45px;
+        height: 68px;
     }
 
     /* 2. Μικραίνουμε τα χαρτιά */
     .card, .card-back {
-        width: 50px;   /* Από 80px το πάμε 50px */
-        height: 75px;  /* Από 120px το πάμε 75px */
-        min-width: 40px;  /* Ελάχιστο πλάτος */
-        min-height: 60px; /* Ελάχιστο ύψος */
-        border-radius: 4px;
-        flex-shrink: 0; /* ΔΕΝ επιτρέπεται να συμπιεστεί */
+        width: 45px;
+        height: 68px;
+        min-width: 35px;
+        min-height: 53px;
+        border-radius: 3px;
+        flex-shrink: 0;
     }
 
     /* 3. Μικραίνουμε τα κενά ανάμεσα στα χαρτιά */
     #opponent-hand, #table-area, #my-hand {
-        gap: 4px;      /* Πολύ μικρό κενό */
-        min-height: 80px;
-        flex-wrap: nowrap; /* Δεν πάνε σε νέα σειρά */
+        gap: 3px;
+        min-height: 70px;
+        flex-wrap: nowrap;
     }
     
     /* Overlap για τα χαρτιά στο τραπέζι σε μικρές οθόνες */
     #table-area .card {
-        margin-left: -20px;
+        margin-left: -15px;
     }
     
     #table-area .card:first-child {
         margin-left: 0;
     }
 
-    /* 4. Μικραίνουμε λίγο τα γράμματα */
+    /* 4. Μικραίνουμε τα γράμματα */
     h1 {
-        font-size: 18px;
+        font-size: 16px;
         margin-top: 5px;
     }
     
     /* Όταν η στοίβα έχει χαρτιά */
     .score-pile.has-cards {
-        border: none; /* Φεύγει το διακεκομμένο */
-        
-        /* Βάζουμε την εικόνα φόντο απευθεία στο κουτί */
+        border: none;
         background-image: url('../img/cards/back.png');
         background-size: cover;
         background-position: center;
-        
-        /* Εφέ πολλών καρτών (σκιά) */
         box-shadow: 
-            2px 2px 0 #1e3c72,
-            4px 4px 0 white,
-            6px 6px 5px rgba(0,0,0,0.5);
-            
-        /* Σιγουρεύουμε ότι το νούμερο θα φαίνεται */
+            1px 1px 0 #1e3c72,
+            2px 2px 0 white,
+            3px 3px 3px rgba(0,0,0,0.5);
         position: relative;
         color: white;
-        text-shadow: 1px 1px 2px black, 0 0 5px black; /* Έντονη σκιά στο νούμερο για να διαβάζεται */
-        font-size: 24px;
+        text-shadow: 1px 1px 2px black, 0 0 5px black;
+        font-size: 18px;
     }
 
     button {
-        padding: 8px 16px;
-        font-size: 14px;
+        padding: 6px 12px;
+        font-size: 12px;
     }
 
+    /* ΔΙΟΡΘΩΣΗ UI LAYER ΓΙΑ ΚΙΝΗΤΑ */
     #ui-layer {
-        padding: 10px;
-        font-size: 14px;
+        padding: 5px 5px;
+        font-size: 12px;
+        flex-direction: column; /* Αλλάζουμε σε στήλη για μικρές οθόνες */
+        gap: 5px;
+        align-items: stretch; /* Full width */
     }
+    
     .game-title {
-        font-size: 16px;
-    }
-    /* Στοιχίζουμε οριζόντια και στα κινητά */
-    .score-box {
-        padding: 5px 15px; 
         font-size: 14px;
-        flex-direction: row; 
-        min-width: 170px; /* Μικρότερο min-width για κινητά */
+        order: 1; /* Πρώτο στη σειρά */
+    }
+    
+    /* Στοιχίζουμε τα score boxes οριζόντια κάτω από τον τίτλο */
+    #ui-layer .score-box {
+        order: 2;
+        padding: 3px 8px;
+        font-size: 11px;
+        flex-direction: row;
+        min-width: auto; /* Αφαιρούμε το σταθερό πλάτος */
+        width: 48%; /* Μισό πλάτος για να χωράνε δίπλα-δίπλα */
+        justify-content: center;
+        gap: 4px;
+    }
+    
+    /* Container για τα δύο score boxes να είναι δίπλα-δίπλα */
+    #ui-layer {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+    }
+    
+    .game-title-container {
+        width: 100%;
+        order: 1;
+    }
+    
+    .score-box .player-name-text {
+        font-size: 11px;
+    }
+    
+    .score-box span#score-me, .score-box span#score-opp {
+        font-size: 16px;
     }
     
     /* Προσαρμογή κουμπιού εξόδου για κινητά */
     #btn-quit-game {
-        bottom: 10px;
-        left: 10px;
-        width: 100px;
-        font-size: 14px;
-        padding: 5px;
+        bottom: 5px;
+        left: 5px;
+        width: 80px;
+        font-size: 11px;
+        padding: 4px;
+    }
+    
+    /* Προσαρμογή status message */
+    #game-status {
+        font-size: 12px;
+        margin-top: 3px;
     }
 }

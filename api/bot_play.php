@@ -107,15 +107,22 @@ $new_score = intval($game['player2_score']) + $xeri_points;
 // Αλλαγή σειράς
 $next_turn = 1;
 
-// Ενημέρωση βάσης
-$update_sql = "UPDATE games SET 
-    player2_hand = '" . $mysqli->real_escape_string(json_encode($bot_hand)) . "',
-    player2_collected = '" . $mysqli->real_escape_string(json_encode($bot_collected)) . "',
-    table_cards = '" . $mysqli->real_escape_string(json_encode($table_cards)) . "',
-    current_player = $next_turn,
-    last_to_collect = " . ($last_to_collect ?: "NULL") . ",
-    player2_score = $new_score
-    WHERE id = $game_id";
+// Δημιουργία UPDATE query με δυναμικά πεδία
+$update_parts = [
+    "player2_hand = '" . $mysqli->real_escape_string(json_encode($bot_hand)) . "'",
+    "player2_collected = '" . $mysqli->real_escape_string(json_encode($bot_collected)) . "'",
+    "table_cards = '" . $mysqli->real_escape_string(json_encode($table_cards)) . "'",
+    "current_player = $next_turn",
+    "last_to_collect = " . ($last_to_collect ?: "NULL"),
+    "player2_score = $new_score"
+];
+
+// Ενημέρωση last_played: ΜΟΝΟ αν μάζεψε (αλλιώς μένει η προηγούμενη τιμή)
+if ($action === 'collect') {
+    $update_parts[] = "player2_last_played = '$played_card'";
+}
+
+$update_sql = "UPDATE games SET " . implode(', ', $update_parts) . " WHERE id = $game_id";
 
 if (!$mysqli->query($update_sql)) {
     echo json_encode(['error' => 'Database error: ' . $mysqli->error]);

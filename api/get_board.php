@@ -104,24 +104,29 @@ if ($game_info['status'] === 'finished') {
     $my_collected = json_decode(($my_side == 1) ? $game_info['player1_collected'] : $game_info['player2_collected'], true) ?: [];
     $opp_collected = json_decode(($opp_side == 1) ? $game_info['player1_collected'] : $game_info['player2_collected'], true) ?: [];
 
-    // Το σκορ είναι ήδη υπολογισμένο στη βάση (card_score + xeri_bonus)
-    $my_score = intval($game_info[($my_side == 1) ? 'player1_score' : 'player2_score']);
-    $opp_score = intval($game_info[($opp_side == 1) ? 'player1_score' : 'player2_score']);
+    // Υπολογισμός πλήρους σκορ: πόντοι από κάρτες + πόντοι ξερής (αποθηκευμένοι στη βάση)
+    $my_card_score = calculate_card_score($my_collected);
+    $opp_card_score = calculate_card_score($opp_collected);
+    $my_xeri_score = intval($game_info[($my_side == 1) ? 'player1_score' : 'player2_score']);
+    $opp_xeri_score = intval($game_info[($opp_side == 1) ? 'player1_score' : 'player2_score']);
+    
+    $my_score = $my_card_score + $my_xeri_score;
+    $opp_score = $opp_card_score + $opp_xeri_score;
 
     // Καθορισμός νικητή
     $winner = 'draw';
     $final_message = "Ισοπαλία!";
 
-    // Έλεγχος αν τελείωσε από εγκατάλειψη/αποσύνδεση:
+    // Έλεγχος αν τελείωσε φυσιολογικά ή από εγκατάλειψη:
     $deck = json_decode($game_info['deck'], true) ?: [];
     $p1_hand = json_decode($game_info['player1_hand'], true) ?: [];
     $p2_hand = json_decode($game_info['player2_hand'], true) ?: [];
-    $ended_early = (count($deck) > 0) || (count($p1_hand) > 0) || (count($p2_hand) > 0);
     
-    // Αν είναι PvP και υπάρχει last_to_collect ως νικητής από disconnect/quit
-    $is_likely_quit = ($ended_early || $total_score < 10);
+    // Κανονική λήξη: δεν υπάρχει τράπουλα ΚΑΙ δεν υπάρχουν χαρτιά στα χέρια
+    $is_normal_end = (count($deck) == 0 && count($p1_hand) == 0 && count($p2_hand) == 0);
     
-    if ($is_likely_quit && $game_info['player2_id'] !== null && $game_info['last_to_collect'] !== null) {
+    // Αν είναι PvP και ΔΕΝ τελείωσε φυσιολογικά (quit/disconnect)
+    if (!$is_normal_end && $game_info['player2_id'] !== null && $game_info['last_to_collect'] !== null) {
         if (intval($game_info['last_to_collect']) == $my_side) {
             $winner = 'me';
             $final_message = "🎉 Νίκησες! Ο αντίπαλος αποχώρησε από το παιχνίδι.";
@@ -180,6 +185,10 @@ foreach ($my_hand as $idx => $card) {
     $my_hand_formatted[] = ['id' => $idx, 'code' => $card];
 }
 
+// Τελευταία κάρτα που έπαιξε κάθε παίκτης (για εμφάνιση στη στοίβα)
+$my_last_played = ($my_side == 1) ? $game_info['player1_last_played'] : $game_info['player2_last_played'];
+$opp_last_played = ($opp_side == 1) ? $game_info['player1_last_played'] : $game_info['player2_last_played'];
+
 echo json_encode([
     'status' => 'active',
     'table' => $table_cards,
@@ -189,8 +198,10 @@ echo json_encode([
     
     'my_score' => $my_score,
     'my_pile_count' => count($my_collected),
+    'my_last_card' => $my_last_played,
     'opp_score' => $opp_score,
     'opp_pile_count' => count($opp_collected),
+    'opp_last_card' => $opp_last_played,
     
     'is_my_turn' => $is_my_turn,
     'game_mode' => $game_mode,
